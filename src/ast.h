@@ -56,6 +56,25 @@ struct Logical : Expr {
     : left(std::move(l)), op(o), right(std::move(r)) {}
 };
 
+struct ArrayExpr : Expr {
+  std::vector<std::unique_ptr<Expr>> elements;
+  ArrayExpr(std::vector<std::unique_ptr<Expr>> e) : elements(std::move(e)) {}
+};
+
+struct IndexExpr : Expr {
+  std::unique_ptr<Expr> callee;
+  std::unique_ptr<Expr> index;
+  IndexExpr(std::unique_ptr<Expr> c, std::unique_ptr<Expr> i) : callee(std::move(c)), index(std::move(i)) {}
+};
+
+struct AssignIndex : Expr {
+  std::unique_ptr<Expr> callee;
+  std::unique_ptr<Expr> index;
+  std::unique_ptr<Expr> value;
+  AssignIndex(std::unique_ptr<Expr> c, std::unique_ptr<Expr> i, std::unique_ptr<Expr> v)
+    : callee(std::move(c)), index(std::move(i)), value(std::move(v)) {}
+};
+
 struct Stmt {
   virtual ~Stmt() = default;
 };
@@ -109,7 +128,6 @@ struct ReturnStmt : Stmt {
 };
 
 struct BreakStmt : Stmt {};
-
 struct ContinueStmt : Stmt {};
 
 struct ForStmt : Stmt {

@@ -11,9 +11,13 @@ struct PTValue {
   std::string value;
   std::shared_ptr<PTFunction> function;
   bool isFunction;
-  PTValue() : value("nil"), isFunction(false) {}
-  PTValue(std::string v) : value(v), isFunction(false) {}
-  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true) {}
+  std::shared_ptr<std::vector<PTValue>> array;
+  bool isArray;
+
+  PTValue() : value("nil"), isFunction(false), isArray(false) {}
+  PTValue(std::string v) : value(v), isFunction(false), isArray(false) {}
+  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true), isArray(false) {}
+  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), array(a), isFunction(false), isArray(true) {}
 };
 
 struct Environment {
@@ -47,6 +51,7 @@ private:
 
   PTValue evaluate(Expr* expr);
   PTValue callBuiltin(const std::string& name, const std::vector<std::unique_ptr<Expr>>& args);
+  std::string formatValue(const PTValue& val);
   bool isTruthy(const PTValue& val);
   bool isEqual(const PTValue& a, const PTValue& b);
   std::string formatNumber(const std::string& val);

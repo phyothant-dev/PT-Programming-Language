@@ -1,75 +1,30 @@
-// basic PT test
-print "=== vars ===";
-var x = 10;
-var y = 3;
-print x + y;
-print x * y;
-print (x - y) / 2;
+// arrays
+print "=== arrays ===";
+var arr = [1, 2, 3, 4, 5];
+print arr;
+print arr[0];
+print arr[4];
+arr[2] = 99;
+print arr;
 
-print "=== if/else ===";
-if (x > y) {
-  print "x is bigger";
-} else {
-  print "nope";
-}
+print "=== push ===";
+push(arr, 6);
+print arr;
+print len(arr);
 
-print "=== while ===";
-var i = 0;
-while (i < 3) {
-  print i;
-  i = i + 1;
-}
+print "=== pop ===";
+var last = pop(arr);
+print last;
+print arr;
 
-print "=== for loop ===";
-for (var n = 0; n < 5; n = n + 1) {
-  print n;
-}
+print "=== nested ===";
+var nested = [[1, 2], [3, 4]];
+print nested;
+print nested[0][1];
 
-print "=== break ===";
-var a = 0;
-while (a < 10) {
-  if (a == 2) break;
-  print a;
-  a = a + 1;
-}
-
-print "=== continue ===";
-var b = 0;
-while (b < 5) {
-  b = b + 1;
-  if (b == 2) continue;
-  print b;
-}
-
-print "=== functions ===";
-fun greet(name) {
-  print "hello " + name;
-}
-greet("pt");
-
-fun add(a, b) {
-  return a + b;
-}
-print add(40, 2);
-
-print "=== recursion ===";
-fun fact(n) {
-  if (n <= 1) return 1;
-  return n * fact(n - 1);
-}
-print fact(6);
-
-print "=== string ops ===";
-print len("hello");
-print "foo" + "bar";
-
-print "=== scope ===";
-var z = "outer";
-{
-  print z;
-  var z = "inner";
-  print z;
-}
-print z;
+print "=== file io ===";
+writeFile("/tmp/test.txt", "hello from pt");
+print readFile("/tmp/test.txt");
+print readFile("/tmp/nonexistent");
 
 print "=== done ===";

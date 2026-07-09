@@ -17,8 +17,10 @@ A simple, readable programming language implemented in C++17 — built by [Phyo 
 - **Closures** — functions capture enclosing scope, mutable state
 - **Recursion** — fully supported
 - **Lexical scoping** — blocks create new scopes, inner shadows outer
+- **Arrays** — `[1, 2, 3]`, index read/write `arr[0] = val`, nested arrays
+- **File I/O** — `readFile(path)`, `writeFile(path, content)`
+- **Built-in functions** — `len()`, `push()`, `pop()`, `toNum()`, `toString()`, `input()`
 - **Comments** — `// line comments`
-- **Built-in functions** — `len()`, `toNum()`, `toString()`, `input()`
 - **REPL** — interactive mode
 - **File execution** — run `.pt` files
 
@@ -140,14 +142,43 @@ var x = "outer";
 print x;      // outer
 ```
 
+### Arrays
+
+```pt
+var arr = [1, 2, 3, 4, 5];
+print arr;        // [1, 2, 3, 4, 5]
+print arr[0];     // 1
+arr[2] = 99;      // [1, 2, 99, 4, 5]
+push(arr, 6);     // [1, 2, 99, 4, 5, 6]
+print pop(arr);   // 6
+print len(arr);   // 5
+
+// nested arrays
+var nested = [[1, 2], [3, 4]];
+print nested[0][1];  // 2
+```
+
+### File I/O
+
+```pt
+writeFile("/tmp/data.txt", "hello world");
+print readFile("/tmp/data.txt");  // hello world
+print readFile("/tmp/nope");      // nil (file doesn't exist)
+```
+
 ### Built-in Functions
 
 ```pt
 len("hello")       // 5
+len([1, 2, 3])     // 3
+push(arr, val)     // append to array
+pop(arr)           // remove and return last element
 toNum("42")        // 42
 toNum("abc")       // nil
 toString(42)       // "42"
 input("name: ")    // reads a line from stdin
+readFile(path)     // read file contents (nil on error)
+writeFile(path, content)  // write to file (true/false)
 ```
 
 ### Logical Operators
@@ -200,7 +231,7 @@ breakStmt    → "break" ";"
 continueStmt → "continue" ";"
 returnStmt   → "return" expression? ";"
 expression   → assignment
-assignment   → IDENTIFIER "=" assignment | or
+assignment   → IDENTIFIER "=" assignment | IDENTIFIER "[" expression "]" "=" assignment | or
 or           → and ("or" and)*
 and          → equality ("and" equality)*
 equality     → comparison (("==" | "!=") comparison)*
@@ -208,9 +239,9 @@ comparison   → term (("<" | "<=" | ">" | ">=") term)*
 term         → factor (("+" | "-") factor)*
 factor       → unary (("*" | "/") unary)*
 unary        → ("!" | "-") unary | call
-call         → primary ("(" arguments? ")")*
+call         → primary ( "(" arguments? ")" | "[" expression "]" )*
 primary      → NUMBER | STRING | "true" | "false" | "nil"
-             | IDENTIFIER | "(" expression ")"
+             | IDENTIFIER | "(" expression ")" | "[" (expression ("," expression)*)? "]"
 ```
 
 ## License

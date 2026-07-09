@@ -147,6 +147,10 @@ std::unique_ptr<Expr> Parser::assignment() {
     auto value = assignment();
     if (auto* v = dynamic_cast<Variable*>(expr.get()))
       return std::make_unique<Assign>(v->name, std::move(value));
+    IndexExpr* raw = dynamic_cast<IndexExpr*>(expr.get());
+    if (raw) {
+      return std::make_unique<AssignIndex>(std::move(raw->callee), std::move(raw->index), std::move(value));
+    }
     throw std::runtime_error("Invalid assignment target");
   }
   return expr;
@@ -223,13 +227,21 @@ std::unique_ptr<Expr> Parser::unary() {
 
 std::unique_ptr<Expr> Parser::call() {
   auto expr = primary();
-  if (match({TokenType::LPAREN})) {
-    std::vector<std::unique_ptr<Expr>> args;
-    if (!check(TokenType::RPAREN)) {
-      do { args.push_back(expression()); } while (match({TokenType::COMMA}));
+  while (true) {
+    if (match({TokenType::LPAREN})) {
+      std::vector<std::unique_ptr<Expr>> args;
+      if (!check(TokenType::RPAREN)) {
+        do { args.push_back(expression()); } while (match({TokenType::COMMA}));
+      }
+      consume(TokenType::RPAREN, "Expect ')' after arguments");
+      expr = std::make_unique<Call>(std::move(expr), std::move(args));
+    } else if (match({TokenType::LBRACKET})) {
+      auto index = expression();
+      consume(TokenType::RBRACKET, "Expect ']' after index");
+      expr = std::make_unique<IndexExpr>(std::move(expr), std::move(index));
+    } else {
+      break;
     }
-    consume(TokenType::RPAREN, "Expect ')' after arguments");
-    expr = std::make_unique<Call>(std::move(expr), std::move(args));
   }
   return expr;
 }
@@ -247,6 +259,14 @@ std::unique_ptr<Expr> Parser::primary() {
     return std::make_unique<Literal>("nil", false, false, false, true);
   if (match({TokenType::IDENTIFIER}))
     return std::make_unique<Variable>(previous().value);
+  if (match({TokenType::LBRACKET})) {
+    std::vector<std::unique_ptr<Expr>> elements;
+    if (!check(TokenType::RBRACKET)) {
+      do { elements.push_back(expression()); } while (match({TokenType::COMMA}));
+    }
+    consume(TokenType::RBRACKET, "Expect ']' after array elements");
+    return std::make_unique<ArrayExpr>(std::move(elements));
+  }
   if (match({TokenType::LPAREN})) {
     auto expr = expression();
     consume(TokenType::RPAREN, "Expect ')' after expression");
