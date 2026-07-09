@@ -1,0 +1,75 @@
+// basic PT test
+print "=== vars ===";
+var x = 10;
+var y = 3;
+print x + y;
+print x * y;
+print (x - y) / 2;
+
+print "=== if/else ===";
+if (x > y) {
+  print "x is bigger";
+} else {
+  print "nope";
+}
+
+print "=== while ===";
+var i = 0;
+while (i < 3) {
+  print i;
+  i = i + 1;
+}
+
+print "=== for loop ===";
+for (var n = 0; n < 5; n = n + 1) {
+  print n;
+}
+
+print "=== break ===";
+var a = 0;
+while (a < 10) {
+  if (a == 2) break;
+  print a;
+  a = a + 1;
+}
+
+print "=== continue ===";
+var b = 0;
+while (b < 5) {
+  b = b + 1;
+  if (b == 2) continue;
+  print b;
+}
+
+print "=== functions ===";
+fun greet(name) {
+  print "hello " + name;
+}
+greet("pt");
+
+fun add(a, b) {
+  return a + b;
+}
+print add(40, 2);
+
+print "=== recursion ===";
+fun fact(n) {
+  if (n <= 1) return 1;
+  return n * fact(n - 1);
+}
+print fact(6);
+
+print "=== string ops ===";
+print len("hello");
+print "foo" + "bar";
+
+print "=== scope ===";
+var z = "outer";
+{
+  print z;
+  var z = "inner";
+  print z;
+}
+print z;
+
+print "=== done ===";
