@@ -2,6 +2,8 @@
 
 A simple, readable programming language implemented in C++17 — built by [Phyo Thant](https://github.com/phyothant-dev) as a learning project in language design and implementation.
 
+**[Live Demo](https://pt-language-production.up.railway.app)** — website built and served entirely in PT.
+
 ---
 
 ## Installation
@@ -117,46 +119,149 @@ Hello, World!
 
 ---
 
+## Build a Web Server
+
+PT has a **built-in HTTP server**. Create a file and run it:
+
+```pt
+// server.pt
+let page = readFile("index.html");
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    return page;
+  }
+
+  if (req.path is "/api/hello") {
+    return {status: 200, headers: {"content-type": "application/json"}, body: "{\"hello\": \"world\"}"};
+  }
+
+  return {status: 404, body: "<h1>404</h1>"};
+});
+```
+
+```sh
+pt server.pt
+# Server running at http://localhost:3000
+```
+
+### Request object
+
+| Property | Description |
+|----------|-------------|
+| `req.method` | `"GET"`, `"POST"`, etc. |
+| `req.path` | `"/about"`, `"/api/users"` |
+| `req.headers` | Map of HTTP headers |
+| `req.body` | Request body (POST data) |
+
+### Response formats
+
+```pt
+// Simple HTML response
+return "<h1>Hello!</h1>";
+
+// Full control response
+return {
+  status: 200,
+  headers: {"content-type": "application/json"},
+  body: "{\"key\": \"value\"}"
+};
+```
+
+### Deploy to Railway
+
+The project includes a Dockerfile for one-click deployment:
+
+1. Push to GitHub
+2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo
+3. Select your repo — Railway builds and deploys automatically
+4. Your site is live at `https://your-project.up.railway.app`
+
+---
+
 ## Features
+
+### Core
 
 - **Variables** — `let name = value;` (also `var` for compatibility)
 - **Constants** — `const PI = 3.14;` (cannot be reassigned)
 - **Compound assignment** — `+=`, `-=`, `*=`, `/=`, `%=`
 - **Arithmetic** — `+`, `-`, `*`, `/`, `%` with proper precedence
-- **Strings** — double-quoted, concatenation with `+`, indexing `s[0]`
+- **Postfix** — `i++`, `i--`
+- **String repetition** — `"ha" * 3` → `"hahaha"`, `3 * "ab"` → `"ababab"`
+- **Comparisons** — `is`, `isnt`, `<`, `<=`, `>`, `>=`
+- **Logical operators** — `and`, `or`, `not` with short-circuit evaluation
+- **In operator** — `20 in [10, 20, 30]`, `"a" in "apple"`, `"key" in map`
+
+### Strings
+
+- **String types** — double-quoted `"hello"`, backtick multiline `` `line1\nline2` ``
 - **String interpolation** — `"Hello, ${name}!"`
 - **String builtins** — `upper()`, `lower()`, `trim()`, `substr()`, `contains()`, `replace()`, `split()`
-- **Comparisons** — `is`, `isnt`, `<`, `<=`, `>`, `>=`
-- **Logical operators** — `and`, `or` with short-circuit evaluation
-- **If/else/else if** — `if (cond) { ... } else if (cond) { ... } else { ... }`
+
+### Control Flow
+
+- **If/elif/else** — `if (cond) { ... } elif (cond) { ... } else { ... }`
 - **Unless** — `unless (cond) { ... }` (opposite of `if`)
 - **Ternary operator** — `condition ? trueVal : falseVal`
 - **While loops** — `while (cond) { ... }`
 - **Loop** — `loop { ... }` (infinite loop, use `break` to exit)
+- **Repeat** — `repeat 5 { ... }` (run block N times)
 - **For loops** — `for (let i = 0; i < n; i += 1) { ... }`
 - **For-each loops** — `for (item in arr) { ... }`
+- **Match expressions** — `match(val) { 1 => "one" 2 => "two" _ => "other" }`
 - **Break/Continue** — loop control
+
+### Functions & Lambdas
+
 - **Functions** — `fn name(params) { ... }` with `return`
+- **Default params** — `fn greet(name = "World") { ... }`
 - **Arrow functions** — `fn name(params) => expression;` or inline `(x) => x * 2`
 - **Closures** — functions capture enclosing scope, mutable state
 - **Recursion** — fully supported
 - **Lexical scoping** — blocks create new scopes, inner shadows outer
+
+### Collections
+
 - **Arrays** — `[1, 2, 3]`, index read/write `arr[0] = val`, negative indexing `arr[-1]`
-- **Maps/Dictionaries** — `{"key": val}`, dot access `obj.key`, bracket access `obj["key"]`
+- **Maps/Dictionaries** — `{name: "PT", ver: 2}`, dot access `obj.key`, bracket access `obj["key"]`
+- **List comprehensions** — `[x * 2 for x in nums]`, `[x for x in nums if x > 3]`
 - **Map builtins** — `keys()`, `values()`, `has()`
-- **Math builtins** — `abs()`, `sqrt()`, `min()`, `max()`, `floor()`, `ceil()`, `round()`
 - **Higher-order builtins** — `map()`, `filter()`, `reduce()`
 - **Collection builtins** — `join()`, `indexOf()`, `sort()`, `range()`
-- **Type checking** — `type(val)` returns `"number"`, `"string"`, `"array"`, `"map"`, `"function"`, or `"nil"`
-- **Error handling** — `try { ... } catch (e) { ... } finally { ... }`, `throw "message"`
+
+### Object-Oriented Programming
+
+- **Classes** — `class Dog { ... }`
+- **Constructor** — `fn init(name) { this.name = name; }`
+- **Inheritance** — `class Puppy < Dog { ... }`
+- **This/Super** — `this.name`, `super.method()`
+- **Static methods** — `static fn create() { ... }`
+- **Enums** — `enum Color { RED, GREEN, BLUE }` (RED=0, GREEN=1, BLUE=2)
+
+### Web & I/O
+
+- **HTTP server** — `httpListen(port, handler)` with POSIX sockets
+- **File I/O** — `readFile(path)`, `writeFile(path, content)`, `fileExists(path)`
+- **Environment** — `getenv("PORT")` to read environment variables
 - **Imports** — `import "module.pt";` or `import "module.pt" as mod;`
-- **File I/O** — `readFile(path)`, `writeFile(path, content)`
-- **Built-in functions** — `len()`, `push()`, `pop()`, `toNum()`, `toString()`, `input()`, `clock()`, `random()`
+
+### Other
+
+- **Math builtins** — `abs()`, `sqrt()`, `min()`, `max()`, `floor()`, `ceil()`, `round()`
+- **Type checking** — `type(val)` returns `"number"`, `"string"`, `"array"`, `"map"`, `"function"`, `"class"`, or `"nil"`
+- **Error handling** — `try { ... } catch (e) { ... } finally { ... }`, `throw "message"`
 - **Print** — `show(val)` prints with newline, `print(val)` prints without newline
 - **Assert** — `assert(cond, msg)` — throws on failure
+- **Random** — `random()` (0-1), `random(100)` (0-99), `random(1, 10)` (1-9)
+- **Clock** — `clock()` returns seconds since epoch
 - **Comments** — `// line comments`
 - **REPL** — interactive mode with multi-line support
-- **File execution** — run `.pt` files
+- **Export** — `export fn name() { ... }` for modules
+
+---
 
 ## Examples
 
@@ -173,6 +278,7 @@ let x = 10;
 var y = 3;          // var works too
 const PI = 3.14159;
 x += 5;             // compound assignment
+x++;                // postfix increment
 ```
 
 ### Conditionals
@@ -181,7 +287,7 @@ x += 5;             // compound assignment
 let grade = 85;
 if (grade >= 90) {
   show("A");
-} else if (grade >= 80) {
+} elif (grade >= 80) {
   show("B");
 } else {
   show("C");
@@ -208,14 +314,14 @@ loop {
   if (count is 5) break;
 }
 
+// repeat
+repeat 5 { show("hello!"); }
+
 // for
 for (let n = 0; n < 5; n += 1) { show(n); }
 
 // for-each
 for (item in [1, 2, 3]) { show(item); }
-
-// for-each on strings
-for (c in "hello") { print(c); }
 ```
 
 ### Functions & Lambdas
@@ -240,6 +346,62 @@ let nums = [1, 2, 3, 4, 5];
 let doubled = map(nums, (x) => x * 2);
 let evens = filter(nums, (x) => x % 2 == 0);
 let total = reduce(nums, (a, b) => a + b, 0);
+
+// list comprehension
+let squares = [x * x for x in nums];
+let big = [x for x in nums if x > 3];
+```
+
+### Pattern Matching
+
+```pt
+let day = 3;
+let name = match(day) {
+  1 => "Monday"
+  2 => "Tuesday"
+  3 => "Wednesday"
+  _ => "Other"
+};
+show(name);  // Wednesday
+
+let x = 42;
+match (x) {
+  0 => show("zero")
+  42 => show("the answer!")
+  _ => show("something else")
+}
+```
+
+### Classes & OOP
+
+```pt
+class Animal {
+  name = "";
+  sound = "";
+
+  fn init(name, sound) {
+    this.name = name;
+    this.sound = sound;
+  }
+
+  fn speak() {
+    return this.name + " says " + this.sound + "!";
+  }
+}
+
+class Dog < Animal {
+  fn init(name) {
+    this.name = name;
+    this.sound = "woof";
+  }
+}
+
+let rex = Dog("Rex");
+show(rex.speak());  // Rex says woof!
+
+// enums
+enum Color { RED, GREEN, BLUE }
+show(Color.RED);    // 0
 ```
 
 ### Closures
@@ -260,105 +422,103 @@ show(c());  // 2
 ### Maps
 
 ```pt
-let person = {"name": "PT", "version": 2};
+let person = {name: "PT", version: 2};
 show(person.name);       // dot access
 show(person["version"]); // bracket access
 person.author = "Phyo";  // dot assignment
-show(keys(person));      // ["name", "version", "author"]
+show(keys(person));      // [name, version, author]
 show(has(person, "name")); // true
 ```
 
-### String Interpolation
+### HTTP Server
 
 ```pt
-let name = "World";
-show("Hello, ${name}!");
-show("2 + 3 = ${2 + 3}");
+let page = readFile("index.html");
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") return page;
+
+  if (req.path is "/api/data") {
+    return {
+      status: 200,
+      headers: {"content-type": "application/json"},
+      body: "{\"message\": \"Hello from PT!\"}"
+    };
+  }
+
+  return {status: 404, body: "<h1>404</h1>"};
+});
 ```
 
-### Error Handling
+---
 
-```pt
-try {
-  let result = riskyOperation();
-} catch (e) {
-  show("Error: " + e);
-} finally {
-  cleanup();
-}
+## Built-in Functions
 
-throw "something went wrong";
-```
+### Core
+| Function | Description |
+|----------|-------------|
+| `len(s)` | Length of string or array |
+| `push(arr, val)` | Append to array |
+| `pop(arr)` | Remove and return last element |
+| `toNum(s)` | Convert string to number |
+| `toString(v)` | Convert value to string |
+| `type(v)` | Return type name as string |
+| `assert(cond, msg)` | Throw if condition is false |
+| `clock()` | Seconds since epoch |
+| `random()` | Random 0.0–1.0 |
+| `random(max)` | Random 0 to max-1 |
+| `random(min, max)` | Random min to max-1 |
+| `getenv(key)` | Read environment variable |
+| `input(prompt)` | Read line from stdin |
 
-### Imports
+### String
+| Function | Description |
+|----------|-------------|
+| `upper(s)` | Uppercase |
+| `lower(s)` | Lowercase |
+| `trim(s)` | Trim whitespace |
+| `substr(s, start, len)` | Substring |
+| `contains(s, sub)` | Check if contains |
+| `replace(s, old, new)` | Replace all |
+| `split(s, delim)` | Split into array |
+| `join(arr, delim)` | Join array |
+| `indexOf(s, val)` | Find index |
 
-```pt
-// math.pt defines add, subtract, PI
-import "math.pt";
-show(add(1, 2));
+### Math
+| Function | Description |
+|----------|-------------|
+| `abs(x)` | Absolute value |
+| `sqrt(x)` | Square root |
+| `min(a, b)` | Minimum |
+| `max(a, b)` | Maximum |
+| `floor(x)` | Floor |
+| `ceil(x)` | Ceil |
+| `round(x)` | Round |
 
-// or with alias
-import "math.pt" as math;
-show(math.PI);
-```
+### Collections
+| Function | Description |
+|----------|-------------|
+| `sort(arr)` | Sorted copy |
+| `range(end)` | [0..end-1] |
+| `range(start, end)` | [start..end-1] |
+| `map(arr, fn)` | Transform elements |
+| `filter(arr, fn)` | Filter elements |
+| `reduce(arr, fn, init)` | Reduce to single value |
+| `keys(map)` | Array of keys |
+| `values(map)` | Array of values |
+| `has(map, key)` | Check if key exists |
 
-### Built-in Functions
+### File & Web
+| Function | Description |
+|----------|-------------|
+| `readFile(path)` | Read file contents |
+| `writeFile(path, content)` | Write to file |
+| `fileExists(path)` | Check if file exists |
+| `httpListen(port, handler)` | Start HTTP server |
 
-```pt
-// Core
-len("hello")              // 5
-len([1, 2, 3])            // 3
-push(arr, val)            // append to array
-pop(arr)                  // remove and return last element
-toNum("42")               // 42
-toString(42)              // "42"
-type(42)                  // "number"
-assert(1 == 1, "error")  // throws if false
-clock()                   // seconds since epoch
-random()                  // 0.0 to 1.0
-random(100)               // 0 to 99
-random(1, 10)             // 1 to 9
-
-// String
-upper("hello")            // "HELLO"
-lower("HELLO")            // "hello"
-trim("  hi  ")            // "hi"
-substr("hello", 1, 3)     // "ell"
-contains("hello", "ell")  // true
-replace("hello", "l", "r") // "herro"
-split("a,b,c", ",")       // ["a", "b", "c"]
-join(["a", "b"], "-")     // "a-b"
-indexOf("hello", "ell")   // 1
-
-// Math
-abs(-42)                  // 42
-sqrt(9)                   // 3
-min(3, 7)                 // 3
-max(3, 7)                 // 7
-floor(3.7)                // 3
-ceil(3.2)                 // 4
-round(3.5)                // 4
-
-// Collections
-sort([3, 1, 2])           // [1, 2, 3]
-range(5)                  // [0, 1, 2, 3, 4]
-range(1, 6)               // [1, 2, 3, 4, 5]
-map([1, 2], (x) => x * 2) // [2, 4]
-filter([1, 2, 3], (x) => x > 1) // [2, 3]
-reduce([1, 2, 3], (a, b) => a + b, 0) // 6
-
-// Maps
-keys({"a": 1, "b": 2})    // ["a", "b"]
-values({"a": 1, "b": 2})  // [1, 2]
-has({"a": 1}, "a")         // true
-
-// File I/O
-readFile(path)            // read file contents (nil on error)
-writeFile(path, content)  // write to file (true/false)
-
-// Input
-input("name: ")           // reads a line from stdin
-```
+---
 
 ## Project Structure
 
@@ -366,18 +526,31 @@ input("name: ")           // reads a line from stdin
 PT-Programming-Language/
 ├── pt                  # compiled binary
 ├── Makefile            # build system
+├── Dockerfile          # Docker build for deployment
+├── railway.json        # Railway platform config
 ├── install.sh          # one-line installer
-├── test.pt             # test suite (113 tests)
+├── web.pt              # web demo entry point
+├── server.pt           # production web server
+├── test.pt             # test suite (163 tests)
 ├── README.md
 ├── .gitignore
+├── demo/               # website files
+│   ├── index.html      # landing page
+│   ├── style.css       # dark theme CSS
+│   ├── docs.html       # language reference
+│   ├── playground.html # interactive examples
+│   └── 404.html        # error page
 └── src/
     ├── main.cpp        # entry point, REPL, file runner
     ├── token.h         # token type definitions
     ├── lexer.h/.cpp    # scanner — source → tokens
     ├── ast.h           # AST node definitions
     ├── parser.h/.cpp   # parser — tokens → AST
+    ├── http.h/.cpp     # HTTP server (POSIX sockets)
     └── interpreter.h/.cpp  # tree-walk interpreter
 ```
+
+---
 
 ## Requirements
 
@@ -388,50 +561,7 @@ No other dependencies. No package managers. No runtime required.
 
 Windows users can skip all requirements — just download the pre-built `.exe` from [Releases](https://github.com/phyothant-dev/PT-Programming-Language/releases).
 
-## Grammar
-
-```
-program      → declaration* EOF
-declaration  → constDecl | funDecl | varDecl | statement
-constDecl    → "const" IDENTIFIER "=" expression ";"
-funDecl      → "fn" IDENTIFIER "(" parameters? ")" ( "=>" expression ";" | block )
-varDecl      → ("let" | "var") IDENTIFIER ("=" expression)? ";"
-statement    → exprStmt | showStmt | printStmt | block | ifStmt | unlessStmt
-             | whileStmt | loopStmt | forStmt | breakStmt | continueStmt
-             | returnStmt | tryStmt | importStmt
-exprStmt     → expression ";"
-showStmt     → "show" expression ";"
-printStmt    → "print" expression ";"
-block        → "{" declaration* "}"
-ifStmt       → "if" "(" expression ")" statement ("else if" "(" expression ")" statement)* ("else" statement)?
-unlessStmt   → "unless" "(" expression ")" statement
-whileStmt    → "while" "(" expression ")" statement
-loopStmt     → "loop" statement
-forStmt      → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement
-             | "for" "(" IDENTIFIER "in" expression ")" statement
-breakStmt    → "break" ";"
-continueStmt → "continue" ";"
-returnStmt   → "return" expression? ";"
-tryStmt      → "try" block ("catch" ("(" IDENTIFIER ")")? block)? ("finally" block)?
-importStmt   → "import" STRING ("as" IDENTIFIER)? ";"
-expression   → assignment
-assignment   → IDENTIFIER ("+=" | "-=" | "*=" | "/=" | "%=") assignment
-             | IDENTIFIER "=" assignment | IDENTIFIER "[" expression "]" "=" assignment
-             | IDENTIFIER "." IDENTIFIER "=" assignment | ternary
-ternary      → or ("?" expression ":" assignment)?
-or           → and ("or" and)*
-and          → equality ("and" and)*
-equality     → comparison (("is" | "isnt" | "==" | "!=") comparison)*
-comparison   → term (("<" | "<=" | ">" | ">=") term)*
-term         → factor (("+" | "-") factor)*
-factor       → unary (("*" | "/" | "%") unary)*
-unary        → ("!" | "-" | "throw") unary | call
-call         → primary ( "(" arguments? ")" | "[" expression "]" | "." IDENTIFIER )*
-primary      → NUMBER | STRING | "true" | "false" | "nil"
-             | IDENTIFIER | "(" expression ")" | "[" (expression ("," expression)*)? "]"
-             | "{" (expression ":" expression ("," expression ":")*)? "}"
-             | "(" parameters? ")" "=>" (expression | block)
-```
+---
 
 ## License
 
