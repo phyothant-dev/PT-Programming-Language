@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PT Language - Build Anything</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">PT</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="playground.html">Playground</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/phyothant-dev/PT-Programming-Language" target="_blank">GitHub</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Write Code.<br><span class="gradient">Build Web Pages.</span></h1>
+      <p class="hero-sub">PT is a unique programming language with its own syntax, a built-in HTTP server, and everything you need to build real web applications.</p>
+      <div class="hero-buttons">
+        <a href="playground.html" class="btn btn-primary">Try It Live</a>
+        <a href="docs.html" class="btn btn-secondary">Read the Docs</a>
+      </div>
+    </div>
+    <div class="hero-code">
+      <div class="code-window">
+        <div class="code-bar">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="code-title">server.pt</span>
+        </div>
+        <pre><code><span class="kw">let</span> page = <span class="fn">readFile</span>(<span class="str">"index.html"</span>);
+
+<span class="fn">httpListen</span>(<span class="num">3000</span>, (<span class="arg">req</span>) => {
+  <span class="kw">if</span> (<span class="arg">req</span>.path <span class="kw">is</span> <span class="str">"/"</span>) {
+    <span class="kw">return</span> page;
+  }
+  <span class="kw">return</span> <span class="str">"404"</span>;
+});</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>Why PT?</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F680;</div>
+        <h3>Unique Syntax</h3>
+        <p>No more <code>print()</code>. Use <code>show()</code>. No <code>==</code>, use <code>is</code>. PT has its own identity.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F310;</div>
+        <h3>Built-in Server</h3>
+        <p>One line to start a web server. <code>httpListen(3000, handler)</code> and you're live.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F4C1;</div>
+        <h3>File I/O</h3>
+        <p>Read and write files with <code>readFile()</code> and <code>writeFile()</code>. Serve static assets.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F3AF;</div>
+        <h3>Pattern Matching</h3>
+        <p>Powerful <code>match</code> expressions with <code>=></code> syntax for clean, readable code.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F4A1;</div>
+        <h3>Classes & OOP</h3>
+        <p>Full OOP with classes, inheritance, static methods, <code>this</code> and <code>super</code>.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x26A1;</div>
+        <h3>Zero Setup</h3>
+        <p>Single binary. No packages, no npm, no build step. Just <code>./pt server.pt</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo-section">
+    <h2>Try PT Now</h2>
+    <p>Install PT and build your own web server in 10 lines.</p>
+    <div class="demo-grid">
+      <div class="demo-card">
+        <h3>1. Install</h3>
+        <p><code>git clone</code> the repo and <code>make</code></p>
+      </div>
+      <div class="demo-card">
+        <h3>2. Create server.pt</h3>
+        <p>Write your routes with <code>httpListen</code></p>
+      </div>
+      <div class="demo-card">
+        <h3>3. Run</h3>
+        <p><code>./pt server.pt</code> — live at localhost:3000</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo-section" style="background: var(--bg2); border-radius: 16px; margin: 0 2rem;">
+    <h2>Quick Example</h2>
+    <div class="code-window" style="max-width: 700px; margin: 0 auto; text-align: left;">
+      <div class="code-bar">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="code-title">server.pt</span>
+      </div>
+      <pre><code><span class="kw">let</span> page = <span class="fn">readFile</span>(<span class="str">"index.html"</span>);
+
+<span class="fn">httpListen</span>(<span class="num">3000</span>, (<span class="arg">req</span>) => {
+  <span class="kw">if</span> (<span class="arg">req</span>.path <span class="kw">is</span> <span class="str">"/"</span>) {
+    <span class="kw">return</span> page;
+  }
+  <span class="kw">if</span> (<span class="arg">req</span>.path <span class="kw">is</span> <span class="str">"/api/hello"</span>) {
+    <span class="kw">return</span> <span class="str">"{message: Hello!}"</span>;
+  }
+  <span class="kw">return</span> {status: <span class="num">404</span>, body: <span class="str">"Not Found"</span>};
+});</code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <p>Built with PT Programming Language &mdash; <a href="https://github.com/phyothant-dev/PT-Programming-Language" target="_blank">View on GitHub</a></p>
+  </footer>
+</body>
+</html>
