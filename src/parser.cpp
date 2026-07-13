@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "lexer.h"
 #include <stdexcept>
 
 Token Parser::peek() { return tokens[current]; }
@@ -41,8 +42,12 @@ std::unique_ptr<Stmt> Parser::statement() {
     return std::make_unique<ContinueStmt>();
   }
   if (match({TokenType::PRINT})) return showStmt();
+  if (match({TokenType::PRINT_NL})) return printStmt();
+  if (match({TokenType::TRY})) return tryStmt();
+  if (match({TokenType::IMPORT})) return importStmt();
   if (match({TokenType::LBRACE})) return blockStmt();
   if (match({TokenType::VAR})) return varStmt();
+  if (match({TokenType::CONST})) return constStmt();
   return exprStmt();
 }
 
@@ -84,6 +89,12 @@ std::unique_ptr<Stmt> Parser::showStmt() {
   return std::make_unique<PrintStmt>(std::move(expr));
 }
 
+std::unique_ptr<Stmt> Parser::printStmt() {
+  auto expr = expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after value");
+  return std::make_unique<PrintNLStmt>(std::move(expr));
+}
+
 std::unique_ptr<Stmt> Parser::exprStmt() {
   auto expr = expression();
   consume(TokenType::SEMICOLON, "Expect ';' after expression");
@@ -98,6 +109,24 @@ std::unique_ptr<Stmt> Parser::varStmt() {
   return std::make_unique<VarStmt>(name.value, std::move(init));
 }
 
+std::unique_ptr<Stmt> Parser::constStmt() {
+  Token name = consume(TokenType::IDENTIFIER, "Expect constant name");
+  consume(TokenType::EQ, "Expect '=' after constant name");
+  auto init = expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after constant declaration");
+  return std::make_unique<ConstStmt>(name.value, std::move(init));
+}
+
+std::unique_ptr<Stmt> Parser::importStmt() {
+  auto pathToken = consume(TokenType::STRING, "Expect module path after 'import'");
+  std::string alias;
+  if (match({TokenType::IDENTIFIER}) && previous().value == "as") {
+    alias = consume(TokenType::IDENTIFIER, "Expect alias after 'as'").value;
+  }
+  consume(TokenType::SEMICOLON, "Expect ';' after import");
+  return std::make_unique<ImportStmt>(pathToken.value, alias);
+}
+
 std::unique_ptr<Stmt> Parser::blockStmt() {
   auto stmts = block();
   return std::make_unique<BlockStmt>(std::move(stmts));
@@ -109,7 +138,14 @@ std::unique_ptr<Stmt> Parser::ifStmt() {
   consume(TokenType::RPAREN, "Expect ')' after condition");
   auto thenB = statement();
   std::unique_ptr<Stmt> elseB;
-  if (match({TokenType::ELSE})) elseB = statement();
+  if (match({TokenType::ELSE})) {
+    if (check(TokenType::IF)) {
+      advance();
+      elseB = ifStmt();
+    } else {
+      elseB = statement();
+    }
+  }
   return std::make_unique<IfStmt>(std::move(cond), std::move(thenB), std::move(elseB));
 }
 
@@ -178,6 +214,27 @@ std::vector<std::unique_ptr<Stmt>> Parser::block() {
   return stmts;
 }
 
+std::unique_ptr<Stmt> Parser::tryStmt() {
+  consume(TokenType::LBRACE, "Expect '{' after 'try'");
+  auto tryBody = block();
+  std::string catchVar;
+  std::vector<std::unique_ptr<Stmt>> catchBody;
+  std::vector<std::unique_ptr<Stmt>> finallyBody;
+  if (match({TokenType::CATCH})) {
+    if (match({TokenType::LPAREN})) {
+      catchVar = consume(TokenType::IDENTIFIER, "Expect error variable name").value;
+      consume(TokenType::RPAREN, "Expect ')' after catch variable");
+    }
+    consume(TokenType::LBRACE, "Expect '{' after 'catch'");
+    catchBody = block();
+  }
+  if (match({TokenType::FINALLY})) {
+    consume(TokenType::LBRACE, "Expect '{' after 'finally'");
+    finallyBody = block();
+  }
+  return std::make_unique<TryStmt>(std::move(tryBody), catchVar, std::move(catchBody), std::move(finallyBody));
+}
+
 // Expression parsing
 
 std::unique_ptr<Expr> Parser::expression() { return assignment(); }
@@ -188,6 +245,8 @@ std::unique_ptr<Expr> Parser::assignment() {
     auto value = assignment();
     if (auto* v = dynamic_cast<Variable*>(expr.get()))
       return std::make_unique<Assign>(v->name, std::move(value));
+    if (auto* d = dynamic_cast<DotExpr*>(expr.get()))
+      return std::make_unique<DotAssignExpr>(std::move(d->object), d->name, std::move(value));
     IndexExpr* raw = dynamic_cast<IndexExpr*>(expr.get());
     if (raw) {
       return std::make_unique<AssignIndex>(std::move(raw->callee), std::move(raw->index), std::move(value));
@@ -285,13 +344,20 @@ std::unique_ptr<Expr> Parser::unary() {
     auto right = unary();
     return std::make_unique<Unary>(op, std::move(right));
   }
+  if (match({TokenType::THROW})) {
+    auto val = unary();
+    return std::make_unique<ThrowExpr>(std::move(val));
+  }
   return call();
 }
 
 std::unique_ptr<Expr> Parser::call() {
   auto expr = primary();
   while (true) {
-    if (match({TokenType::LPAREN})) {
+    if (match({TokenType::DOT})) {
+      auto name = consume(TokenType::IDENTIFIER, "Expect property name after '.'");
+      expr = std::make_unique<DotExpr>(std::move(expr), name.value);
+    } else if (match({TokenType::LPAREN})) {
       std::vector<std::unique_ptr<Expr>> args;
       if (!check(TokenType::RPAREN)) {
         do { args.push_back(expression()); } while (match({TokenType::COMMA}));
@@ -312,8 +378,32 @@ std::unique_ptr<Expr> Parser::call() {
 std::unique_ptr<Expr> Parser::primary() {
   if (match({TokenType::NUMBER}))
     return std::make_unique<Literal>(previous().value, true);
-  if (match({TokenType::STRING}))
-    return std::make_unique<Literal>(previous().value, false, true);
+  if (match({TokenType::STRING})) {
+    auto raw = previous().value;
+    if (raw.find("${") != std::string::npos) {
+      std::vector<std::string> strings;
+      std::vector<std::unique_ptr<Expr>> exprs;
+      size_t pos = 0;
+      while (pos < raw.size()) {
+        auto dollar = raw.find("${", pos);
+        if (dollar == std::string::npos) {
+          strings.push_back(raw.substr(pos));
+          break;
+        }
+        strings.push_back(raw.substr(pos, dollar - pos));
+        auto close = raw.find("}", dollar + 2);
+        if (close == std::string::npos) throw std::runtime_error("Unterminated interpolation at line " + std::to_string(previous().line));
+        std::string exprStr = raw.substr(dollar + 2, close - dollar - 2);
+        Lexer innerLexer(exprStr);
+        auto innerTokens = innerLexer.scan();
+        Parser innerParser(innerTokens);
+        exprs.push_back(innerParser.expression());
+        pos = close + 1;
+      }
+      return std::make_unique<InterpolatedExpr>(std::move(strings), std::move(exprs));
+    }
+    return std::make_unique<Literal>(raw, false, true);
+  }
   if (match({TokenType::TRUE}))
     return std::make_unique<Literal>("true", false, false, true);
   if (match({TokenType::FALSE}))
@@ -330,7 +420,52 @@ std::unique_ptr<Expr> Parser::primary() {
     consume(TokenType::RBRACKET, "Expect ']' after array elements");
     return std::make_unique<ArrayExpr>(std::move(elements));
   }
+  if (match({TokenType::LBRACE})) {
+    std::vector<std::pair<std::unique_ptr<Expr>, std::unique_ptr<Expr>>> entries;
+    if (!check(TokenType::RBRACE)) {
+      do {
+        auto key = expression();
+        consume(TokenType::COLON, "Expect ':' after map key");
+        auto val = expression();
+        entries.push_back({std::move(key), std::move(val)});
+      } while (match({TokenType::COMMA}));
+    }
+    consume(TokenType::RBRACE, "Expect '}' after map entries");
+    return std::make_unique<MapExpr>(std::move(entries));
+  }
   if (match({TokenType::LPAREN})) {
+    int saved = current;
+    std::vector<std::string> params;
+    bool isLambda = false;
+    if (check(TokenType::IDENTIFIER)) {
+      params.push_back(advance().value);
+      while (match({TokenType::COMMA})) {
+        params.push_back(consume(TokenType::IDENTIFIER, "Expect parameter name").value);
+      }
+      if (match({TokenType::RPAREN}) && check(TokenType::ARROW)) {
+        isLambda = true;
+      }
+    }
+    if (check(TokenType::RPAREN) && current + 1 < (int)tokens.size() && tokens[current + 1].type == TokenType::ARROW) {
+      if (!isLambda) {
+        params.clear();
+        match({TokenType::RPAREN});
+        isLambda = true;
+      }
+    }
+    if (isLambda) {
+      advance();
+      std::vector<std::unique_ptr<Stmt>> body;
+      if (check(TokenType::LBRACE)) {
+        advance();
+        body = block();
+      } else {
+        auto val = expression();
+        body.push_back(std::make_unique<ReturnStmt>(std::move(val)));
+      }
+      return std::make_unique<LambdaExpr>(std::move(params), std::move(body));
+    }
+    current = saved;
     auto expr = expression();
     consume(TokenType::RPAREN, "Expect ')' after expression");
     return std::make_unique<Grouping>(std::move(expr));

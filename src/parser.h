@@ -35,8 +35,10 @@ private:
 
   std::unique_ptr<Stmt> statement();
   std::unique_ptr<Stmt> showStmt();
+  std::unique_ptr<Stmt> printStmt();
   std::unique_ptr<Stmt> exprStmt();
   std::unique_ptr<Stmt> varStmt();
+  std::unique_ptr<Stmt> constStmt();
   std::unique_ptr<Stmt> blockStmt();
   std::unique_ptr<Stmt> ifStmt();
   std::unique_ptr<Stmt> unlessStmt();
@@ -46,5 +48,7 @@ private:
   std::unique_ptr<Stmt> funStmt();
   std::unique_ptr<Stmt> returnStmt();
   std::unique_ptr<Stmt> forEachStmt();
+  std::unique_ptr<Stmt> tryStmt();
+  std::unique_ptr<Stmt> importStmt();
   std::vector<std::unique_ptr<Stmt>> block();
 };

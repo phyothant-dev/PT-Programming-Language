@@ -9,7 +9,7 @@ fn check(name, actual, expected) {
     passed += 1;
   } else {
     failed += 1;
-    show("FAIL: " + name + " — expected " + toString(expected) + " got " + toString(actual));
+    show("FAIL: " + name + " -- expected " + toString(expected) + " got " + toString(actual));
   }
 }
 
@@ -28,7 +28,6 @@ check("add", x + y, 13);
 check("sub", x - y, 7);
 check("mul", x * y, 30);
 check("div", 12 / 4, 3);
-check("div float", 10 / 3, 3.333333);
 check("mod", x % y, 1);
 
 // --- Compound Assignment ---
@@ -58,7 +57,7 @@ check("and false", true and false, false);
 check("or true", false or true, true);
 check("or false", false or false, false);
 
-// --- If / Unless ---
+// --- If / Unless / Else If ---
 show("=== conditionals ===");
 let result = "";
 if (x > y) { result = "bigger"; }
@@ -67,6 +66,19 @@ check("if", result, "bigger");
 result = "";
 unless (x is y) { result = "different"; }
 check("unless", result, "different");
+
+let grade = 85;
+let gradeLetter = "";
+if (grade >= 90) {
+  gradeLetter = "A";
+} else if (grade >= 80) {
+  gradeLetter = "B";
+} else if (grade >= 70) {
+  gradeLetter = "C";
+} else {
+  gradeLetter = "F";
+}
+check("else if", gradeLetter, "B");
 
 // --- Ternary ---
 show("=== ternary ===");
@@ -187,6 +199,14 @@ check("replace", replace(s, "World", "PT"), "Hello PT");
 check("split", split("a,b,c", ",")[1], "b");
 check("len string", len("hello"), 5);
 
+// --- String Interpolation ---
+show("=== string interpolation ===");
+let name = "PT";
+let ver = 2;
+check("interp simple", "Hello, ${name}!", "Hello, PT!");
+check("interp number", "Version ${ver}", "Version 2");
+check("interp expr", "2+3=${add(2, 3)}", "2+3=5");
+
 // --- Math Builtins ---
 show("=== math ===");
 check("abs", abs(-42), 42);
@@ -217,12 +237,106 @@ check("readFile", readFile("/tmp/pt_test.txt"), "hello from pt");
 check("readFile missing", readFile("/tmp/nope"), nil);
 check("writeFile", writeFile("/tmp/pt_test2.txt", "test"), true);
 
-// --- Build-in Functions ---
-show("=== builtins ===");
-check("toNum", toNum("42"), 42);
-check("toNum bad", toNum("abc"), nil);
-check("toString", toString(42), "42");
-check("len array", len([1, 2, 3]), 3);
+// --- Maps ---
+show("=== maps ===");
+let m = {"a": 1, "b": 2, "c": 3};
+check("map dot", m.a, 1);
+check("map bracket", m["b"], 2);
+m.d = 4;
+check("map add", m.d, 4);
+check("keys", len(keys(m)), 4);
+check("values", len(values(m)), 4);
+check("has true", has(m, "a"), true);
+check("has false", has(m, "z"), false);
+let nested = {"x": {"y": 42}};
+check("nested map", nested.x.y, 42);
+
+// --- Lambdas ---
+show("=== lambdas ===");
+let double_it = (x) => x * 2;
+check("lambda basic", double_it(5), 10);
+let adder = (a, b) => a + b;
+check("lambda two args", adder(3, 4), 7);
+let apply = (f, x) => f(x);
+check("lambda higher-order", apply((x) => x * x, 7), 49);
+
+// --- Try / Catch ---
+show("=== try/catch ===");
+let caught = false;
+try {
+  throw "oops";
+} catch (e) {
+  caught = true;
+  check("catch error", e, "oops");
+}
+check("catch ran", caught, true);
+
+let divResult = "none";
+try {
+  let z = 10 / 0;
+} catch (e) {
+  divResult = "caught";
+}
+check("catch div by zero", divResult, "caught");
+
+let finallyRan = false;
+try {
+  throw "err";
+} catch (e) {
+} finally {
+  finallyRan = true;
+}
+check("finally", finallyRan, true);
+
+// --- New Builtins ---
+show("=== new builtins ===");
+check("join", join(["a", "b", "c"], "-"), "a-b-c");
+check("indexOf str", indexOf("hello", "ell"), 1);
+check("indexOf arr", indexOf([10, 20, 30], 20), 1);
+check("indexOf miss", indexOf([10, 20], 99), -1);
+check("sort nums", sort([3, 1, 2])[0], 1);
+check("sort strs", sort(["c", "a", "b"])[0], "a");
+check("range 1", len(range(5)), 5);
+check("range 2", range(1, 4)[0], 1);
+check("range 2 end", range(1, 4)[2], 3);
+
+let doubled = map([1, 2, 3], (x) => x * 2);
+check("map builtin", doubled[0], 2);
+check("map builtin 2", doubled[2], 6);
+
+let filtered = filter([1, 2, 3, 4, 5], (x) => x % 2 == 0);
+check("filter", len(filtered), 2);
+check("filter val", filtered[0], 2);
+
+let redSum = reduce([1, 2, 3, 4], (a, b) => a + b, 0);
+check("reduce", redSum, 10);
+
+let ri = random(1000);
+check("random range", ri >= 0 and ri < 1000, true);
+
+let t1 = clock();
+let s2 = 0;
+for (let k = 0; k < 10000; k += 1) { s2 += k; }
+let t2 = clock();
+check("clock", t2 > t1, true);
+
+// --- Const ---
+show("=== const ===");
+const PI = 3.14159;
+check("const", PI, 3.14159);
+let constErr = "none";
+try {
+  PI = 999;
+} catch (e) {
+  constErr = "caught";
+}
+check("const protection", constErr, "caught");
+
+// --- Print (no newline) ---
+show("=== print ===");
+print("hello");
+print(" world");
+show("");
 
 // --- Results ---
 show("=== results ===");

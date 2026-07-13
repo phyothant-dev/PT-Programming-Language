@@ -23,7 +23,7 @@ struct Binary : Expr {
   std::unique_ptr<Expr> left, right;
   std::string op;
   Binary(std::unique_ptr<Expr> l, std::string o, std::unique_ptr<Expr> r)
-    : left(std::move(l)), op(o), right(std::move(r)) {}
+    : left(std::move(l)), right(std::move(r)), op(o) {}
 };
 
 struct Unary : Expr {
@@ -53,7 +53,7 @@ struct Logical : Expr {
   std::unique_ptr<Expr> left, right;
   std::string op;
   Logical(std::unique_ptr<Expr> l, std::string o, std::unique_ptr<Expr> r)
-    : left(std::move(l)), op(o), right(std::move(r)) {}
+    : left(std::move(l)), right(std::move(r)), op(o) {}
 };
 
 struct ArrayExpr : Expr {
@@ -83,6 +83,32 @@ struct TernaryExpr : Expr {
     : condition(std::move(c)), trueBranch(std::move(t)), falseBranch(std::move(f)) {}
 };
 
+struct MapExpr : Expr {
+  std::vector<std::pair<std::unique_ptr<Expr>, std::unique_ptr<Expr>>> entries;
+  MapExpr(std::vector<std::pair<std::unique_ptr<Expr>, std::unique_ptr<Expr>>> e) : entries(std::move(e)) {}
+};
+
+struct DotExpr : Expr {
+  std::unique_ptr<Expr> object;
+  std::string name;
+  DotExpr(std::unique_ptr<Expr> o, std::string n) : object(std::move(o)), name(n) {}
+};
+
+struct DotAssignExpr : Expr {
+  std::unique_ptr<Expr> object;
+  std::string name;
+  std::unique_ptr<Expr> value;
+  DotAssignExpr(std::unique_ptr<Expr> o, std::string n, std::unique_ptr<Expr> v)
+    : object(std::move(o)), name(n), value(std::move(v)) {}
+};
+
+struct InterpolatedExpr : Expr {
+  std::vector<std::string> strings;
+  std::vector<std::unique_ptr<Expr>> exprs;
+  InterpolatedExpr(std::vector<std::string> s, std::vector<std::unique_ptr<Expr>> e)
+    : strings(std::move(s)), exprs(std::move(e)) {}
+};
+
 struct Stmt {
   virtual ~Stmt() = default;
 };
@@ -90,6 +116,11 @@ struct Stmt {
 struct PrintStmt : Stmt {
   std::unique_ptr<Expr> expression;
   PrintStmt(std::unique_ptr<Expr> e) : expression(std::move(e)) {}
+};
+
+struct PrintNLStmt : Stmt {
+  std::unique_ptr<Expr> expression;
+  PrintNLStmt(std::unique_ptr<Expr> e) : expression(std::move(e)) {}
 };
 
 struct ExprStmt : Stmt {
@@ -101,6 +132,12 @@ struct VarStmt : Stmt {
   std::string name;
   std::unique_ptr<Expr> initializer;
   VarStmt(std::string n, std::unique_ptr<Expr> i) : name(n), initializer(std::move(i)) {}
+};
+
+struct ConstStmt : Stmt {
+  std::string name;
+  std::unique_ptr<Expr> initializer;
+  ConstStmt(std::string n, std::unique_ptr<Expr> i) : name(n), initializer(std::move(i)) {}
 };
 
 struct BlockStmt : Stmt {
@@ -152,5 +189,33 @@ struct ForEachStmt : Stmt {
   std::unique_ptr<Expr> iterable;
   std::unique_ptr<Stmt> body;
   ForEachStmt(std::string v, std::unique_ptr<Expr> it, std::unique_ptr<Stmt> b)
-    : variable(std::move(v)), iterable(std::move(it)), body(std::move(b)) {}
+    : variable(v), iterable(std::move(it)), body(std::move(b)) {}
+};
+
+struct LambdaExpr : Expr {
+  std::vector<std::string> params;
+  std::vector<std::unique_ptr<Stmt>> body;
+  LambdaExpr(std::vector<std::string> p, std::vector<std::unique_ptr<Stmt>> b)
+    : params(std::move(p)), body(std::move(b)) {}
+};
+
+struct ImportStmt : Stmt {
+  std::string path;
+  std::string alias;
+  ImportStmt(std::string p, std::string a = "") : path(p), alias(a) {}
+};
+
+struct TryStmt : Stmt {
+  std::vector<std::unique_ptr<Stmt>> tryBody;
+  std::string catchVar;
+  std::vector<std::unique_ptr<Stmt>> catchBody;
+  std::vector<std::unique_ptr<Stmt>> finallyBody;
+  TryStmt(std::vector<std::unique_ptr<Stmt>> tb, std::string cv,
+          std::vector<std::unique_ptr<Stmt>> cb, std::vector<std::unique_ptr<Stmt>> fb)
+    : tryBody(std::move(tb)), catchVar(cv), catchBody(std::move(cb)), finallyBody(std::move(fb)) {}
+};
+
+struct ThrowExpr : Expr {
+  std::unique_ptr<Expr> value;
+  ThrowExpr(std::unique_ptr<Expr> v) : value(std::move(v)) {}
 };

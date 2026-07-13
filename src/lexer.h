@@ -9,7 +9,7 @@ public:
 
 private:
   std::string source;
-  int start = 0, current = 0, line = 1, pos = 0;
+  int start = 0, current = 0, line = 1;
   std::vector<Token> tokens;
 
   bool isAtEnd();

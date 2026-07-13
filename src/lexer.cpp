@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 static const std::unordered_map<std::string, TokenType> keywords = {
-  {"var", TokenType::VAR}, {"print", TokenType::PRINT}, {"show", TokenType::PRINT},
+  {"var", TokenType::VAR}, {"print", TokenType::PRINT_NL}, {"show", TokenType::PRINT},
   {"if", TokenType::IF}, {"else", TokenType::ELSE},
   {"while", TokenType::WHILE}, {"for", TokenType::FOR},
   {"fun", TokenType::FUN}, {"return", TokenType::RETURN},
@@ -15,6 +15,10 @@ static const std::unordered_map<std::string, TokenType> keywords = {
   {"let", TokenType::VAR}, {"fn", TokenType::FUN},
   {"unless", TokenType::UNLESS}, {"loop", TokenType::LOOP},
   {"is", TokenType::IS}, {"isnt", TokenType::ISNT},
+  {"try", TokenType::TRY}, {"catch", TokenType::CATCH},
+  {"finally", TokenType::FINALLY}, {"throw", TokenType::THROW},
+  {"import", TokenType::IMPORT},
+  {"const", TokenType::CONST},
 };
 
 std::vector<Token> Lexer::scan() {
@@ -84,13 +88,30 @@ void Lexer::scanToken() {
 }
 
 void Lexer::string_() {
+  std::string result;
   while (peek() != '"' && !isAtEnd()) {
     if (peek() == '\n') line++;
-    advance();
+    if (peek() == '\\') {
+      advance();
+      char esc = peek();
+      switch (esc) {
+        case 'n': result += '\n'; break;
+        case 't': result += '\t'; break;
+        case 'r': result += '\r'; break;
+        case '\\': result += '\\'; break;
+        case '"': result += '"'; break;
+        case '0': result += '\0'; break;
+        default: result += '\\'; result += esc; break;
+      }
+      advance();
+    } else {
+      result += peek();
+      advance();
+    }
   }
   if (isAtEnd()) throw std::runtime_error("Unterminated string at line " + std::to_string(line));
   advance();
-  addToken(TokenType::STRING, source.substr(start + 1, current - start - 2));
+  addToken(TokenType::STRING, result);
 }
 
 void Lexer::number() {
