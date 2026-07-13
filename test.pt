@@ -1,30 +1,235 @@
-// arrays
-print "=== arrays ===";
-var arr = [1, 2, 3, 4, 5];
-print arr;
-print arr[0];
-print arr[4];
+// ============================================
+// PT Language - Comprehensive Test Suite
+// ============================================
+let passed = 0;
+let failed = 0;
+
+fn check(name, actual, expected) {
+  if (actual is expected) {
+    passed += 1;
+  } else {
+    failed += 1;
+    show("FAIL: " + name + " — expected " + toString(expected) + " got " + toString(actual));
+  }
+}
+
+// --- Variables & Let ---
+show("=== variables ===");
+let x = 10;
+let y = 3;
+check("let basic", x, 10);
+
+var old_style = "compat";
+check("var compat", old_style, "compat");
+
+// --- Arithmetic ---
+show("=== arithmetic ===");
+check("add", x + y, 13);
+check("sub", x - y, 7);
+check("mul", x * y, 30);
+check("div", 12 / 4, 3);
+check("div float", 10 / 3, 3.333333);
+check("mod", x % y, 1);
+
+// --- Compound Assignment ---
+show("=== compound assignment ===");
+let a = 5;
+a += 3; check("+=", a, 8);
+a -= 2; check("-=", a, 6);
+a *= 4; check("*=", a, 24);
+a /= 6; check("/=", a, 4);
+a %= 3; check("%=", a, 1);
+
+// --- Comparisons & is/isnt ---
+show("=== comparisons ===");
+check("is", 5 is 5, true);
+check("isnt", 5 isnt 5, false);
+check("eq", 5 == 5, true);
+check("neq", 5 != 5, false);
+check("lt", 3 < 5, true);
+check("gt", 5 > 3, true);
+check("lte", 3 <= 3, true);
+check("gte", 5 >= 5, true);
+
+// --- Logical Operators ---
+show("=== logical ===");
+check("and true", true and true, true);
+check("and false", true and false, false);
+check("or true", false or true, true);
+check("or false", false or false, false);
+
+// --- If / Unless ---
+show("=== conditionals ===");
+let result = "";
+if (x > y) { result = "bigger"; }
+check("if", result, "bigger");
+
+result = "";
+unless (x is y) { result = "different"; }
+check("unless", result, "different");
+
+// --- Ternary ---
+show("=== ternary ===");
+let msg = x > y ? "yes" : "no";
+check("ternary true", msg, "yes");
+msg = x < y ? "yes" : "no";
+check("ternary false", msg, "no");
+
+// --- While Loop ---
+show("=== while ===");
+let i = 0;
+while (i < 5) { i += 1; }
+check("while", i, 5);
+
+// --- For Loop ---
+show("=== for ===");
+let sum = 0;
+for (let j = 0; j <= 10; j += 1) { sum += j; }
+check("for sum", sum, 55);
+
+// --- For-each ---
+show("=== for-each ===");
+let total = 0;
+for (n in [10, 20, 30]) { total += n; }
+check("for-each array", total, 60);
+
+let chars = "";
+for (c in "hi") { chars += c; }
+check("for-each string", chars, "hi");
+
+// --- Loop / Break / Continue ---
+show("=== loop ===");
+let count = 0;
+loop {
+  count += 1;
+  if (count is 10) break;
+}
+check("loop break", count, 10);
+
+let evens = 0;
+for (let n = 0; n < 10; n += 1) {
+  if (n % 2 isnt 0) continue;
+  evens += 1;
+}
+check("continue", evens, 5);
+
+// --- Functions ---
+show("=== functions ===");
+fn add(a, b) { return a + b; }
+check("function call", add(2, 3), 5);
+
+fn fact(n) {
+  if (n <= 1) return 1;
+  return n * fact(n - 1);
+}
+check("recursion", fact(6), 720);
+
+// --- Arrow Functions ---
+show("=== arrow functions ===");
+fn square(n) => n * n;
+check("arrow", square(7), 49);
+
+fn greet(name) => "Hi, " + name + "!";
+check("arrow string", greet("PT"), "Hi, PT!");
+
+fn getfive() => 5;
+check("arrow no args", getfive(), 5);
+
+// --- Closures ---
+show("=== closures ===");
+fn makeCounter() {
+  let c = 0;
+  fn inc() {
+    c += 1;
+    return c;
+  }
+  return inc;
+}
+let counter = makeCounter();
+check("closure 1", counter(), 1);
+check("closure 2", counter(), 2);
+check("closure 3", counter(), 3);
+
+// --- Scope ---
+show("=== scope ===");
+let outer = "outer";
+{
+  check("outer scope", outer, "outer");
+  let outer = "shadowed";
+  check("shadowed", outer, "shadowed");
+}
+check("outer restored", outer, "outer");
+
+// --- Arrays ---
+show("=== arrays ===");
+let arr = [1, 2, 3, 4, 5];
+check("array literal", arr[0], 1);
+check("negative index", arr[-1], 5);
 arr[2] = 99;
-print arr;
-
-print "=== push ===";
+check("array assign", arr[2], 99);
 push(arr, 6);
-print arr;
-print len(arr);
+check("push", len(arr), 6);
+let last = pop(arr);
+check("pop", last, 6);
+check("nested", [[1, 2], [3, 4]][0][1], 2);
 
-print "=== pop ===";
-var last = pop(arr);
-print last;
-print arr;
+// --- Strings ---
+show("=== strings ===");
+let s = "Hello World";
+check("string index", s[0], "H");
+check("string neg index", s[-1], "d");
+check("upper", upper(s), "HELLO WORLD");
+check("lower", lower(s), "hello world");
+check("trim", trim("  hi  "), "hi");
+check("substr", substr(s, 0, 5), "Hello");
+check("contains", contains(s, "World"), true);
+check("replace", replace(s, "World", "PT"), "Hello PT");
+check("split", split("a,b,c", ",")[1], "b");
+check("len string", len("hello"), 5);
 
-print "=== nested ===";
-var nested = [[1, 2], [3, 4]];
-print nested;
-print nested[0][1];
+// --- Math Builtins ---
+show("=== math ===");
+check("abs", abs(-42), 42);
+check("sqrt", sqrt(9), 3);
+check("min", min(3, 7), 3);
+check("max", max(3, 7), 7);
+check("floor", floor(3.7), 3);
+check("ceil", ceil(3.2), 4);
+check("round", round(3.5), 4);
 
-print "=== file io ===";
-writeFile("/tmp/test.txt", "hello from pt");
-print readFile("/tmp/test.txt");
-print readFile("/tmp/nonexistent");
+// --- Type Checking ---
+show("=== type ===");
+check("type number", type(42), "number");
+check("type string", type("hi"), "string");
+check("type array", type([1, 2]), "array");
+check("type nil", type(nil), "nil");
 
-print "=== done ===";
+// --- Assert ---
+show("=== assert ===");
+assert(1 is 1, "basic assert");
+assert(true, "true assert");
+check("assert pass", 1, 1);
+
+// --- File I/O ---
+show("=== file io ===");
+writeFile("/tmp/pt_test.txt", "hello from pt");
+check("readFile", readFile("/tmp/pt_test.txt"), "hello from pt");
+check("readFile missing", readFile("/tmp/nope"), nil);
+check("writeFile", writeFile("/tmp/pt_test2.txt", "test"), true);
+
+// --- Build-in Functions ---
+show("=== builtins ===");
+check("toNum", toNum("42"), 42);
+check("toNum bad", toNum("abc"), nil);
+check("toString", toString(42), "42");
+check("len array", len([1, 2, 3]), 3);
+
+// --- Results ---
+show("=== results ===");
+show("Passed: " + toString(passed));
+show("Failed: " + toString(failed));
+if (failed is 0) {
+  show("ALL TESTS PASSED");
+} else {
+  show("SOME TESTS FAILED");
+}
