@@ -220,6 +220,8 @@ PTValue Interpreter::evaluate(Expr* expr) {
     if (b->op == "%") return PTValue(formatNumber(std::to_string(std::fmod(std::stod(left.value), std::stod(right.value)))));
     if (b->op == "==") return PTValue(isEqual(left, right) ? "true" : "false");
     if (b->op == "!=") return PTValue(isEqual(left, right) ? "false" : "true");
+    if (b->op == "is") return PTValue(isEqual(left, right) ? "true" : "false");
+    if (b->op == "isnt") return PTValue(isEqual(left, right) ? "false" : "true");
     double l = std::stod(left.value), r = std::stod(right.value);
     if (b->op == "<") return PTValue(l < r ? "true" : "false");
     if (b->op == "<=") return PTValue(l <= r ? "true" : "false");

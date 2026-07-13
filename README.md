@@ -4,20 +4,23 @@ A simple, readable programming language implemented in C++17 — built by [Phyo 
 
 ## Features
 
-- **Variables** — `var name = value;`
+- **Variables** — `let name = value;`
 - **Compound assignment** — `+=`, `-=`, `*=`, `/=`, `%=`
 - **Arithmetic** — `+`, `-`, `*`, `/`, `%` with proper precedence
 - **Strings** — double-quoted, concatenation with `+`
-- **Comparisons** — `==`, `!=`, `<`, `<=`, `>`, `>=`
+- **Comparisons** — `is`, `isnt`, `<`, `<=`, `>`, `>=`
 - **Logical operators** — `and`, `or` with short-circuit evaluation
 - **If/else** — `if (cond) { ... } else { ... }`
+- **Unless** — `unless (cond) { ... }` (opposite of `if`)
 - **While loops** — `while (cond) { ... }`
-- **For loops** — `for (var i = 0; i < n; i = i + 1) { ... }`
+- **Loop** — `loop { ... }` (infinite loop, use `break` to exit)
+- **For loops** — `for (let i = 0; i < n; i = i + 1) { ... }`
 - **For-each loops** — `for (item in arr) { ... }`
 - **Ternary operator** — `condition ? trueVal : falseVal`
 - **Break/Continue** — loop control
 - **Assert** — `assert(cond, msg)` — throws on failure
-- **Functions** — `fun name(params) { ... }` with `return`
+- **Functions** — `fn name(params) { ... }` with `return`
+- **Arrow functions** — `fn name(params) => expression;`
 - **Closures** — functions capture enclosing scope, mutable state
 - **Recursion** — fully supported
 - **Lexical scoping** — blocks create new scopes, inner shadows outer
@@ -43,7 +46,7 @@ g++ -std=c++17 -O2 -o pt src/main.cpp src/lexer.cpp src/parser.cpp src/interpret
 
 # REPL mode
 ./pt
->> fun hello(name) {
+>> fn hello(name) {
 .. print("Hello, " + name + "!");
 .. }
 >> hello("world");
@@ -62,8 +65,8 @@ print "hello world";
 ### Variables & Arithmetic
 
 ```pt
-var x = 10;
-var y = 3;
+let x = 10;
+let y = 3;
 print x + y;     // 13
 print x * y;     // 30
 print (x - y) / 2;  // 3.5
@@ -86,22 +89,34 @@ if (x > y) {
   print "nope";
 }
 
+// unless (opposite of if)
+unless (x is y) {
+  print "x and y are different";
+}
+
 // ternary
-var msg = x > y ? "x wins" : "y wins";
+let msg = x > y ? "x wins" : "y wins";
 ```
 
 ### Loops
 
 ```pt
 // while
-var i = 0;
+let i = 0;
 while (i < 5) {
   print i;
   i = i + 1;
 }
 
+// loop (infinite loop with break)
+let count = 0;
+loop {
+  count += 1;
+  if (count is 5) break;
+}
+
 // for
-for (var n = 0; n < 5; n = n + 1) {
+for (let n = 0; n < 5; n = n + 1) {
   print n;
 }
 
@@ -116,10 +131,10 @@ for (c in "hello") {
 }
 
 // break / continue
-var a = 0;
+let a = 0;
 while (a < 10) {
-  if (a == 3) break;
-  if (a == 1) { a = a + 1; continue; }
+  if (a is 3) break;
+  if (a is 1) { a = a + 1; continue; }
   print a;
   a = a + 1;
 }
@@ -128,36 +143,33 @@ while (a < 10) {
 ### Functions & Recursion
 
 ```pt
-fun fact(n) {
+fn fact(n) {
   if (n <= 1) return 1;
   return n * fact(n - 1);
 }
 print fact(6);  // 720
 
-// with for loop
-fun fact2(n) {
-  var result = 1;
-  for (var i = 1; i <= n; i = i + 1) {
-    result = result * i;
-  }
-  return result;
-}
-print fact2(5);  // 120
+// arrow functions
+fn add = (a, b) => a + b;
+print add(3, 4);  // 7
+
+fn square(n) => n * n;
+print square(5);  // 25
 ```
 
 ### Closures
 
 ```pt
-fun makeCounter() {
-  var count = 0;
-  fun counter() {
+fn makeCounter() {
+  let count = 0;
+  fn counter() {
     count = count + 1;
     return count;
   }
   return counter;
 }
 
-var c = makeCounter();
+let c = makeCounter();
 print c();  // 1
 print c();  // 2
 print c();  // 3
@@ -166,10 +178,10 @@ print c();  // 3
 ### Scope
 
 ```pt
-var x = "outer";
+let x = "outer";
 {
   print x;    // outer
-  var x = "inner";
+  let x = "inner";
   print x;    // inner
 }
 print x;      // outer
@@ -178,7 +190,7 @@ print x;      // outer
 ### Arrays
 
 ```pt
-var arr = [1, 2, 3, 4, 5];
+let arr = [1, 2, 3, 4, 5];
 print arr;        // [1, 2, 3, 4, 5]
 print arr[0];     // 1
 print arr[-1];    // 5 (negative indexing)
@@ -188,14 +200,14 @@ print pop(arr);   // 6
 print len(arr);   // 5
 
 // nested arrays
-var nested = [[1, 2], [3, 4]];
+let nested = [[1, 2], [3, 4]];
 print nested[0][1];  // 2
 ```
 
 ### Strings & Type Checking
 
 ```pt
-var s = "hello";
+let s = "hello";
 print s[0];      // h
 print s[-1];     // o (negative indexing)
 print len(s);    // 5
@@ -292,7 +304,7 @@ pt/
 Requires a C++17 compiler (g++ or clang++).
 
 ```sh
-g++ -std=c++17 -o pt src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.cpp
+g++ -std=c++17 -O2 -o pt src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.cpp
 ```
 
 ## Grammar
@@ -300,15 +312,17 @@ g++ -std=c++17 -o pt src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.c
 ```
 program      → declaration* EOF
 declaration  → funDecl | varDecl | statement
-funDecl      → "fun" IDENTIFIER "(" parameters? ")" block
-varDecl      → "var" IDENTIFIER ("=" expression)? ";"
-statement    → exprStmt | printStmt | block | ifStmt | whileStmt
-             | forStmt | breakStmt | continueStmt | returnStmt
+funDecl      → "fn" IDENTIFIER "(" parameters? ")" ( "->" expression ";" | block )
+varDecl      → ("let" | "var") IDENTIFIER ("=" expression)? ";"
+statement    → exprStmt | printStmt | block | ifStmt | unlessStmt | whileStmt
+             | loopStmt | forStmt | breakStmt | continueStmt | returnStmt
 exprStmt     → expression ";"
 printStmt    → "print" expression ";"
 block        → "{" declaration* "}"
 ifStmt       → "if" "(" expression ")" statement ("else" statement)?
+unlessStmt   → "unless" "(" expression ")" statement
 whileStmt    → "while" "(" expression ")" statement
+loopStmt     → "loop" statement
 forStmt      → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement
              | "for" "(" IDENTIFIER "in" expression ")" statement
 breakStmt    → "break" ";"
@@ -319,8 +333,8 @@ assignment   → IDENTIFIER ("+=" | "-=" | "*=" | "/=" | "%=") assignment
              | IDENTIFIER "=" assignment | IDENTIFIER "[" expression "]" "=" assignment | ternary
 ternary      → or ("?" expression ":" assignment)?
 or           → and ("or" and)*
-and          → equality ("and" equality)*
-equality     → comparison (("==" | "!=") comparison)*
+and          → equality ("and" and)*
+equality     → comparison (("is" | "isnt" | "==" | "!=") comparison)*
 comparison   → term (("<" | "<=" | ">" | ">=") term)*
 term         → factor (("+" | "-") factor)*
 factor       → unary (("*" | "/" | "%") unary)*

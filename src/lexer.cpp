@@ -12,6 +12,9 @@ static const std::unordered_map<std::string, TokenType> keywords = {
   {"nil", TokenType::NIL},
   {"and", TokenType::AND}, {"or", TokenType::OR},
   {"in", TokenType::IN},
+  {"let", TokenType::VAR}, {"fn", TokenType::FUN},
+  {"unless", TokenType::UNLESS}, {"loop", TokenType::LOOP},
+  {"is", TokenType::IS}, {"isnt", TokenType::ISNT},
 };
 
 std::vector<Token> Lexer::scan() {
@@ -66,7 +69,7 @@ void Lexer::scanToken() {
       if (match('/')) { while (peek() != '\n' && !isAtEnd()) advance(); }
       else { addToken(match('=') ? TokenType::SLASH_EQ : TokenType::SLASH); }
       break;
-    case '=': addToken(match('=') ? TokenType::EQ_EQ : TokenType::EQ); break;
+    case '=': addToken(match('>') ? TokenType::ARROW : match('=') ? TokenType::EQ_EQ : TokenType::EQ); break;
     case '!': addToken(match('=') ? TokenType::BANG_EQ : TokenType::BANG); break;
     case '<': addToken(match('=') ? TokenType::LT_EQ : TokenType::LT); break;
     case '>': addToken(match('=') ? TokenType::GT_EQ : TokenType::GT); break;

@@ -27,7 +27,9 @@ std::vector<std::unique_ptr<Stmt>> Parser::parse() {
 std::unique_ptr<Stmt> Parser::statement() {
   if (match({TokenType::FOR})) return forStmt();
   if (match({TokenType::IF})) return ifStmt();
+  if (match({TokenType::UNLESS})) return unlessStmt();
   if (match({TokenType::WHILE})) return whileStmt();
+  if (match({TokenType::LOOP})) return loopStmt();
   if (match({TokenType::FUN})) return funStmt();
   if (match({TokenType::RETURN})) return returnStmt();
   if (match({TokenType::BREAK})) {
@@ -54,6 +56,16 @@ std::unique_ptr<Stmt> Parser::funStmt() {
     } while (match({TokenType::COMMA}));
   }
   consume(TokenType::RPAREN, "Expect ')' after parameters");
+
+  if (match({TokenType::ARROW})) {
+    auto bodyExpr = expression();
+    consume(TokenType::SEMICOLON, "Expect ';' after arrow function");
+    auto ret = std::make_unique<ReturnStmt>(std::move(bodyExpr));
+    std::vector<std::unique_ptr<Stmt>> body;
+    body.push_back(std::move(ret));
+    return std::make_unique<FunctionStmt>(name.value, params, std::move(body));
+  }
+
   consume(TokenType::LBRACE, "Expect '{' before function body");
   auto body = block();
   return std::make_unique<FunctionStmt>(name.value, params, std::move(body));
@@ -107,6 +119,22 @@ std::unique_ptr<Stmt> Parser::whileStmt() {
   consume(TokenType::RPAREN, "Expect ')' after condition");
   auto body = statement();
   return std::make_unique<WhileStmt>(std::move(cond), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::unlessStmt() {
+  consume(TokenType::LPAREN, "Expect '(' after 'unless'");
+  auto cond = expression();
+  consume(TokenType::RPAREN, "Expect ')' after condition");
+  auto body = statement();
+  auto negCond = std::make_unique<Unary>("!", std::move(cond));
+  std::unique_ptr<Stmt> elseB;
+  return std::make_unique<IfStmt>(std::move(negCond), std::move(body), std::move(elseB));
+}
+
+std::unique_ptr<Stmt> Parser::loopStmt() {
+  auto body = statement();
+  auto trueLit = std::make_unique<Literal>("true", false, false, true);
+  return std::make_unique<WhileStmt>(std::move(trueLit), std::move(body));
 }
 
 std::unique_ptr<Stmt> Parser::forStmt() {
@@ -213,7 +241,7 @@ std::unique_ptr<Expr> Parser::and_() {
 
 std::unique_ptr<Expr> Parser::equality() {
   auto expr = comparison();
-  while (match({TokenType::EQ_EQ, TokenType::BANG_EQ})) {
+  while (match({TokenType::EQ_EQ, TokenType::BANG_EQ, TokenType::IS, TokenType::ISNT})) {
     auto op = previous().value;
     auto right = comparison();
     expr = std::make_unique<Binary>(std::move(expr), op, std::move(right));

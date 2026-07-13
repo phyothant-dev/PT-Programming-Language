@@ -39,8 +39,10 @@ private:
   std::unique_ptr<Stmt> varStmt();
   std::unique_ptr<Stmt> blockStmt();
   std::unique_ptr<Stmt> ifStmt();
+  std::unique_ptr<Stmt> unlessStmt();
   std::unique_ptr<Stmt> forStmt();
   std::unique_ptr<Stmt> whileStmt();
+  std::unique_ptr<Stmt> loopStmt();
   std::unique_ptr<Stmt> funStmt();
   std::unique_ptr<Stmt> returnStmt();
   std::unique_ptr<Stmt> forEachStmt();
