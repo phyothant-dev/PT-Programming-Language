@@ -62,39 +62,24 @@ sudo pacman -S git gcc
 curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
 ```
 
-### Windows
+### Windows (no WSL needed)
 
-PT runs on Windows through WSL (Windows Subsystem for Linux).
+Download the pre-built Windows binary from [Releases](https://github.com/phyothant-dev/PT-Programming-Language/releases), extract the `.zip`, then:
 
-**Step 1: Install WSL**
-
-Open PowerShell as Administrator and run:
-
-```powershell
-wsl --install
+```cmd
+pt.exe hello.pt
 ```
 
-Restart your computer when prompted.
+Or use in Command Prompt / PowerShell directly:
 
-**Step 2: Set up Ubuntu**
-
-Open the **Ubuntu** app from the Start menu. Create a username and password when asked.
-
-**Step 3: Install PT**
-
-Inside Ubuntu, paste:
-
-```sh
-sudo apt update && sudo apt install -y git g++ && \
-curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
-```
-
-**Step 4: Start coding**
-
-```sh
-pt
+```cmd
+pt.exe
 >> show("Hello from Windows!");
+Hello from Windows!
+>> exit
 ```
+
+No compiler, no WSL, no extra software needed. Just download and run.
 
 ---
 
@@ -404,6 +389,8 @@ PT-Programming-Language/
 - **Git** — to clone the repository
 
 No other dependencies. No package managers. No runtime required.
+
+Windows users can skip all requirements — just download the pre-built `.exe` from [Releases](https://github.com/phyothant-dev/PT-Programming-Language/releases).
 
 ## Grammar
 
