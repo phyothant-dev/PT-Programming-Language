@@ -148,9 +148,16 @@ show(len("PT Language"));`,
 }
 
 show("Fibonacci sequence:");
-repeat 10 {
-  show(fib(len(toString(repeat 1))));
-}
+show(fib(0));   // 0
+show(fib(1));   // 1
+show(fib(2));   // 1
+show(fib(3));   // 2
+show(fib(4));   // 3
+show(fib(5));   // 5
+show(fib(6));   // 8
+show(fib(7));   // 13
+show(fib(8));   // 21
+show(fib(9));   // 34
 
 // Iterative version
 fn fibIter(n) {
@@ -166,6 +173,7 @@ fn fibIter(n) {
   return a;
 }
 
+show("Iterative:");
 let results = [];
 let i = 0;
 while (i < 10) {
