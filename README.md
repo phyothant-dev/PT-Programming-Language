@@ -62,24 +62,20 @@ sudo pacman -S git gcc
 curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
 ```
 
-### Windows (no WSL needed)
+### Windows (double-click .pt files)
 
-Download the pre-built Windows binary from [Releases](https://github.com/phyothant-dev/PT-Programming-Language/releases), extract the `.zip`, then:
+1. Download **PT-Windows.zip** from [Releases](https://github.com/phyothant-dev/PT-Programming-Language/releases)
+2. Extract the zip anywhere
+3. Right-click **setup.bat** → **Run as administrator**
+4. Done!
 
-```cmd
-pt.exe hello.pt
-```
+After that, you can:
+- **Double-click** any `.pt` file to run it
+- **Right-click** a `.pt` file → "Run with PT"
+- Open Command Prompt anywhere and type `pt`
+- Or `pt your_program.pt`
 
-Or use in Command Prompt / PowerShell directly:
-
-```cmd
-pt.exe
->> show("Hello from Windows!");
-Hello from Windows!
->> exit
-```
-
-No compiler, no WSL, no extra software needed. Just download and run.
+To uninstall: run **uninstall.bat** as administrator.
 
 ---
 
