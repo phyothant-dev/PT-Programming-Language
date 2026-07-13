@@ -1,5 +1,5 @@
 // PT Web Demo Server
-// Run: ./pt server.pt
+// Run locally: ./pt server.pt
 // Open: http://localhost:3000
 
 let homePage = readFile("demo/index.html");
@@ -11,7 +11,13 @@ show("Loading pages...");
 if (homePage is nil) { show("ERROR: Could not load index.html"); return; }
 show("Pages loaded successfully!");
 
-httpListen(3000, (req) => {
+let port = 3000;
+let envPort = getenv("PORT");
+if (envPort isnt "nil") {
+  port = toNum(envPort);
+}
+
+httpListen(port, (req) => {
   let path = req.path;
 
   // --- Static files ---

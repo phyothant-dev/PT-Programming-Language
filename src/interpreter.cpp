@@ -1123,6 +1123,12 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
     double secs = std::chrono::duration<double>(now.time_since_epoch()).count();
     return PTValue(formatNumber(std::to_string(secs)));
   }
+  if (name == "getenv") {
+    if (args.size() != 1) throw PTRuntimeError("getenv() expects 1 argument");
+    auto key = evaluate(args[0].get());
+    const char* val = std::getenv(key.value.c_str());
+    return PTValue(val ? std::string(val) : "nil");
+  }
   if (name == "fileExists") {
     if (args.size() != 1) throw PTRuntimeError("fileExists() expects 1 argument");
     auto path = evaluate(args[0].get());
