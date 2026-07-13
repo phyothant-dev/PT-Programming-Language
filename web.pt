@@ -1,0 +1,130 @@
+let html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PT Web Server</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 3rem;
+      max-width: 700px;
+    }
+    h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, #f857a6, #ff5858, #ffc371);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      font-size: 1.3rem;
+      color: #aaa;
+      margin-bottom: 2rem;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin: 2rem 0;
+    }
+    .feature {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .feature:hover {
+      transform: translateY(-3px);
+      border-color: #f857a6;
+    }
+    .feature h3 { color: #ffc371; margin-bottom: 0.5rem; }
+    .feature p { color: #999; font-size: 0.9rem; }
+    .code {
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+      padding: 1.2rem;
+      margin: 2rem 0;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: #ccc;
+      text-align: left;
+      overflow-x: auto;
+    }
+    .code .kw { color: #f857a6; }
+    .code .str { color: #ffc371; }
+    .code .fn { color: #7ec8e3; }
+    footer {
+      margin-top: 2rem;
+      color: #666;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PT Language</h1>
+    <p class="subtitle">A unique programming language with its own syntax</p>
+    <div class="features">
+      <div class="feature">
+        <h3>Custom Syntax</h3>
+        <p>let, fn, unless, loop, is/isnt, show</p>
+      </div>
+      <div class="feature">
+        <h3>Classes</h3>
+        <p>OOP with inheritance, static methods, this/super</p>
+      </div>
+      <div class="feature">
+        <h3>Pattern Matching</h3>
+        <p>match expressions with => syntax</p>
+      </div>
+      <div class="feature">
+        <h3>Web Server</h3>
+        <p>Built-in HTTP server - you are here!</p>
+      </div>
+    </div>
+    <div class="code">
+      <span class="kw">httpListen</span>(3000, <span class="kw">fn</span>(<span class="fn">req</span>) {<br>
+      &nbsp;&nbsp;<span class="kw">if</span> (<span class="fn">req</span>.path <span class="kw">is</span> <span class="str">"/"</span>) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">readFile</span>(<span class="str">"index.html"</span>);<br>
+      &nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;<span class="kw">return</span> <span class="str">"404 Not Found"</span>;<br>
+      });
+    </div>
+    <footer>Served by PT Programming Language</footer>
+  </div>
+</body>
+</html>
+`;
+
+let handler = (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    return html;
+  }
+
+  if (req.path is "/about") {
+    return "<html><body><h1>About PT</h1><p>A unique programming language</p><a href='/'>Home</a></body></html>";
+  }
+
+  if (req.path is "/api/hello") {
+    return "{\"message\": \"Hello from PT!\", \"language\": \"PT\"}";
+  }
+
+  return "<html><body><h1>404</h1><p>Page not found</p><a href='/'>Home</a></body></html>";
+};
+
+httpListen(3000, handler);
