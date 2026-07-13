@@ -1,0 +1,92 @@
+{
+  "Show": {
+    "prefix": "show",
+    "body": "show(\"$1\");",
+    "description": "Print with newline"
+  },
+  "Variable": {
+    "prefix": "let",
+    "body": "let $1 = $2;",
+    "description": "Declare a variable"
+  },
+  "Constant": {
+    "prefix": "const",
+    "body": "const $1 = $2;",
+    "description": "Declare a constant"
+  },
+  "Function": {
+    "prefix": "fn",
+    "body": "fn $1($2) {\n\t$0\n}",
+    "description": "Define a function"
+  },
+  "Arrow Function": {
+    "prefix": "fn.",
+    "body": "fn $1($2) => $3;",
+    "description": "Define an arrow function"
+  },
+  "If": {
+    "prefix": "if",
+    "body": "if ($1) {\n\t$0\n}",
+    "description": "If statement"
+  },
+  "If Else": {
+    "prefix": "ife",
+    "body": "if ($1) {\n\t$2\n} else {\n\t$0\n}",
+    "description": "If-else statement"
+  },
+  "Else If": {
+    "prefix": "elif",
+    "body": "} else if ($1) {\n\t$0",
+    "description": "Else if branch"
+  },
+  "Unless": {
+    "prefix": "unless",
+    "body": "unless ($1) {\n\t$0\n}",
+    "description": "Unless (opposite of if)"
+  },
+  "While": {
+    "prefix": "while",
+    "body": "while ($1) {\n\t$0\n}",
+    "description": "While loop"
+  },
+  "For": {
+    "prefix": "for",
+    "body": "for (let $1 = 0; $1 < $2; $1 += 1) {\n\t$0\n}",
+    "description": "For loop"
+  },
+  "For Each": {
+    "prefix": "foreach",
+    "body": "for ($1 in $2) {\n\t$0\n}",
+    "description": "For-each loop"
+  },
+  "Loop": {
+    "prefix": "loop",
+    "body": "loop {\n\t$0\n}",
+    "description": "Infinite loop"
+  },
+  "Try Catch": {
+    "prefix": "try",
+    "body": "try {\n\t$1\n} catch ($2) {\n\t$0\n}",
+    "description": "Try-catch block"
+  },
+  "Try Catch Finally": {
+    "prefix": "tryf",
+    "body": "try {\n\t$1\n} catch ($2) {\n\t$3\n} finally {\n\t$0\n}",
+    "description": "Try-catch-finally block"
+  },
+  "Lambda": {
+    "prefix": "lambda",
+    "body": "($1) => $0",
+    "description": "Inline lambda"
+  },
+  "Import": {
+    "prefix": "import",
+    "body": "import \"$1\" as $2;",
+    "description": "Import a module"
+  },
+  "Main": {
+    "prefix": "main",
+    "body": "// $1\nshow(\"Hello, World!\");\n",
+    "description": "Hello World template"
+  }
+}
