@@ -12,6 +12,9 @@ struct PTRuntimeError : public std::runtime_error {
 };
 
 struct PTFunction;
+struct PTClass;
+struct PTInstance;
+
 struct PTValue {
   std::string value;
   std::shared_ptr<PTFunction> function;
@@ -20,12 +23,18 @@ struct PTValue {
   bool isArray;
   std::shared_ptr<std::unordered_map<std::string, PTValue>> map;
   bool isMap;
+  std::shared_ptr<PTClass> klass;
+  bool isClass;
+  std::shared_ptr<PTInstance> instance;
+  bool isInstance;
 
-  PTValue() : value("nil"), isFunction(false), isArray(false), isMap(false) {}
-  PTValue(std::string v) : value(v), isFunction(false), isArray(false), isMap(false) {}
-  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true), isArray(false), isMap(false) {}
-  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), function(nullptr), isFunction(false), array(a), isArray(true), map(nullptr), isMap(false) {}
-  PTValue(std::shared_ptr<std::unordered_map<std::string, PTValue>> m) : value("<map>"), function(nullptr), isFunction(false), array(nullptr), isArray(false), map(m), isMap(true) {}
+  PTValue() : value("nil"), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false) {}
+  PTValue(std::string v) : value(v), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false) {}
+  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true), isArray(false), isMap(false), isClass(false), isInstance(false) {}
+  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), function(nullptr), isFunction(false), array(a), isArray(true), map(nullptr), isMap(false), isClass(false), isInstance(false) {}
+  PTValue(std::shared_ptr<std::unordered_map<std::string, PTValue>> m) : value("<map>"), function(nullptr), isFunction(false), array(nullptr), isArray(false), map(m), isMap(true), isClass(false), isInstance(false) {}
+  PTValue(std::shared_ptr<PTClass> c) : value("<class>"), isFunction(false), isArray(false), isMap(false), klass(c), isClass(true), isInstance(false) {}
+  PTValue(std::shared_ptr<PTInstance> i) : value("<instance>"), isFunction(false), isArray(false), isMap(false), isClass(false), instance(i), isInstance(true) {}
 };
 
 struct Environment {
@@ -37,9 +46,26 @@ struct Environment {
 };
 
 struct PTFunction {
+  std::string name;
   std::vector<std::string> params;
-  std::vector<std::unique_ptr<Stmt>> body;
+  std::shared_ptr<std::vector<std::unique_ptr<Stmt>>> body;
   std::shared_ptr<Environment> closure;
+  bool isStatic = false;
+  bool isInit = false;
+};
+
+struct PTClass {
+  std::string name;
+  std::string parentName;
+  std::shared_ptr<PTClass> parent;
+  std::unordered_map<std::string, PTValue> methods;
+  std::unordered_map<std::string, PTValue> staticMethods;
+  std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields;
+};
+
+struct PTInstance {
+  std::shared_ptr<PTClass> klass;
+  std::unordered_map<std::string, PTValue> fields;
 };
 
 class Interpreter {

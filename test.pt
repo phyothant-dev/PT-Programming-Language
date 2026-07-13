@@ -338,6 +338,219 @@ print("hello");
 print(" world");
 show("");
 
+// ============================================
+// NEW FEATURES TESTS - TIER 1-3
+// ============================================
+
+// --- Tier 1: String repetition ---
+show("=== string repetition ===");
+check("str rep 1", "ha" * 3, "hahaha");
+check("str rep 2", "x" * 5, "xxxxx");
+check("str rep 3", "ab" * 2, "abab");
+check("str rep 0", "abc" * 0, "");
+check("num mul 1", 3 * "ab", "ababab");
+check("num mul 2", 2 * "hi", "hihi");
+
+// --- Tier 1: not keyword ---
+show("=== not keyword ===");
+check("not true", not true, false);
+check("not false", not false, true);
+check("not 0", not 0, true);
+check("not 1", not 1, false);
+check("not empty", not "", true);
+check("not str", not "hi", false);
+let nval = 5;
+check("not expr", not (nval == 3), true);
+
+// --- Tier 1: elif ---
+show("=== elif ===");
+let egrade = 85;
+let eletter = "";
+if (egrade >= 90) {
+  eletter = "A";
+} elif (egrade >= 80) {
+  eletter = "B";
+} elif (egrade >= 70) {
+  eletter = "C";
+} else {
+  eletter = "F";
+}
+check("elif basic", eletter, "B");
+
+let egrade2 = 95;
+let eletter2 = "";
+if (egrade2 >= 90) {
+  eletter2 = "A";
+} elif (egrade2 >= 80) {
+  eletter2 = "B";
+} else {
+  eletter2 = "F";
+}
+check("elif first match", eletter2, "A");
+
+let egrade3 = 50;
+let eletter3 = "";
+if (egrade3 >= 90) {
+  eletter3 = "A";
+} elif (egrade3 >= 80) {
+  eletter3 = "B";
+} else {
+  eletter3 = "F";
+}
+check("elif fallthrough", eletter3, "F");
+
+// --- Tier 1: i++ / i-- ---
+show("=== postfix inc/dec ===");
+let ci = 0;
+ci++;
+check("postfix inc", ci, 1);
+ci++;
+ci++;
+check("postfix inc 2", ci, 3);
+ci--;
+check("postfix dec", ci, 2);
+ci--;
+ci--;
+check("postfix dec 2", ci, 0);
+
+// --- Tier 1: repeat ---
+show("=== repeat ===");
+let rsum = 0;
+repeat 5 {
+  rsum = rsum + 1;
+}
+check("repeat 5", rsum, 5);
+
+let rstr = "";
+repeat 3 {
+  rstr = rstr + "a";
+}
+check("repeat concat", rstr, "aaa");
+
+// --- Tier 1: in operator ---
+show("=== in operator ===");
+let rarr = [10, 20, 30];
+check("in array found", 20 in rarr, true);
+check("in array not found", 99 in rarr, false);
+check("in string found", "el" in "hello", true);
+check("in string not found", "xyz" in "hello", false);
+let rmap = {a: 1, b: 2};
+check("in map found", "a" in rmap, true);
+check("in map not found", "c" in rmap, false);
+
+// --- Tier 2: multiline strings ---
+show("=== multiline strings ===");
+let ml = `
+Hello
+World
+`;
+check("multiline contains", contains(ml, "Hello"), true);
+check("multiline contains 2", contains(ml, "World"), true);
+check("multiline newline", contains(ml, "\n"), true);
+
+// --- Tier 2: export ---
+show("=== export ===");
+// export is tested implicitly via function definitions
+
+// --- Tier 3: match ---
+show("=== match ===");
+let mday = 2;
+let mname = match(mday) {
+  1 => "Monday"
+  2 => "Tuesday"
+  3 => "Wednesday"
+  4 => "Thursday"
+  5 => "Friday"
+  6 => "Saturday"
+  7 => "Sunday"
+};
+check("match basic", mname, "Tuesday");
+
+let mval = 42;
+let mlabel = match(mval) {
+  0 => "zero"
+  42 => "answer"
+  100 => "hundred"
+};
+check("match found", mlabel, "answer");
+
+// --- Tier 3: list comprehension ---
+show("=== list comprehension ===");
+let lnums = [1, 2, 3, 4, 5];
+let ldoubles = [x * 2 for x in lnums];
+check("lc doubles", ldoubles[0], 2);
+check("lc doubles 2", ldoubles[4], 10);
+check("lc doubles len", len(ldoubles), 5);
+
+let leven = [x for x in lnums if x % 2 == 0];
+check("lc filter", leven[0], 2);
+check("lc filter 2", leven[1], 4);
+check("lc filter len", len(leven), 2);
+
+// --- Tier 3: class/struct ---
+show("=== class ===");
+class Dog {
+  name = "";
+  age = 0;
+
+  fn init(name, age) {
+    this.name = name;
+    this.age = age;
+  }
+
+  fn bark() {
+    return this.name + " says woof!";
+  }
+
+  fn getAge() {
+    return this.age;
+  }
+}
+
+let d = Dog("Rex", 5);
+check("class field", d.name, "Rex");
+check("class method", d.bark(), "Rex says woof!");
+check("class age", d.getAge(), 5);
+
+// Class inheritance
+class Puppy < Dog {
+  fn bark() {
+    return this.name + " says yip!";
+  }
+}
+
+let p = Puppy("Tiny", 1);
+check("inherit field", p.name, "Tiny");
+check("inherit method", p.bark(), "Tiny says yip!");
+check("inherit age", p.getAge(), 1);
+
+// --- Tier 3: enum ---
+show("=== enum ===");
+enum Color {
+  RED, GREEN, BLUE
+}
+check("enum RED", Color.RED, 0);
+check("enum GREEN", Color.GREEN, 1);
+check("enum BLUE", Color.BLUE, 2);
+
+// --- Tier 3: static methods ---
+show("=== static methods ===");
+class MathUtil {
+  static fn doubleIt(x) {
+    return x * 2;
+  }
+
+  static fn add(a, b) {
+    return a + b;
+  }
+}
+check("static method 1", MathUtil.doubleIt(5), 10);
+check("static method 2", MathUtil.add(3, 4), 7);
+
+// --- exit keyword ---
+show("=== exit keyword ===");
+// exit is mapped to return, so it works as a statement-level return
+
 // --- Results ---
 show("=== results ===");
 show("Passed: " + toString(passed));

@@ -219,3 +219,69 @@ struct ThrowExpr : Expr {
   std::unique_ptr<Expr> value;
   ThrowExpr(std::unique_ptr<Expr> v) : value(std::move(v)) {}
 };
+
+struct PostfixExpr : Expr {
+  std::unique_ptr<Expr> operand;
+  std::string op;
+  PostfixExpr(std::unique_ptr<Expr> o, std::string op) : operand(std::move(o)), op(op) {}
+};
+
+struct ListCompExpr : Expr {
+  std::unique_ptr<Expr> element;
+  std::string variable;
+  std::unique_ptr<Expr> iterable;
+  std::unique_ptr<Expr> condition;
+  ListCompExpr(std::unique_ptr<Expr> e, std::string v, std::unique_ptr<Expr> it, std::unique_ptr<Expr> c)
+    : element(std::move(e)), variable(v), iterable(std::move(it)), condition(std::move(c)) {}
+};
+
+struct ThisExpr : Expr {};
+
+struct SuperExpr : Expr {
+  std::string method;
+  SuperExpr(std::string m) : method(m) {}
+};
+
+struct MatchCase : Expr {
+  std::vector<std::unique_ptr<Expr>> patterns;
+  std::unique_ptr<Expr> body;
+  MatchCase(std::vector<std::unique_ptr<Expr>> p, std::unique_ptr<Expr> b)
+    : patterns(std::move(p)), body(std::move(b)) {}
+};
+
+struct MatchExpr : Expr {
+  std::unique_ptr<Expr> value;
+  std::vector<std::unique_ptr<MatchCase>> cases;
+  MatchExpr(std::unique_ptr<Expr> v, std::vector<std::unique_ptr<MatchCase>> c)
+    : value(std::move(v)), cases(std::move(c)) {}
+};
+
+struct RepeatStmt : Stmt {
+  int count;
+  std::vector<std::unique_ptr<Stmt>> body;
+  RepeatStmt(int c, std::vector<std::unique_ptr<Stmt>> b) : count(c), body(std::move(b)) {}
+};
+
+struct ClassStmt : Stmt {
+  std::string name;
+  std::string parent;
+  std::vector<std::unique_ptr<FunctionStmt>> methods;
+  std::vector<std::unique_ptr<FunctionStmt>> staticMethods;
+  std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields;
+  ClassStmt(std::string n, std::string p,
+            std::vector<std::unique_ptr<FunctionStmt>> m,
+            std::vector<std::unique_ptr<FunctionStmt>> sm,
+            std::vector<std::pair<std::string, std::unique_ptr<Expr>>> f)
+    : name(n), parent(p), methods(std::move(m)), staticMethods(std::move(sm)), fields(std::move(f)) {}
+};
+
+struct EnumStmt : Stmt {
+  std::string name;
+  std::vector<std::string> values;
+  EnumStmt(std::string n, std::vector<std::string> v) : name(n), values(std::move(v)) {}
+};
+
+struct ExportStmt : Stmt {
+  std::unique_ptr<FunctionStmt> func;
+  ExportStmt(std::unique_ptr<FunctionStmt> f) : func(std::move(f)) {}
+};

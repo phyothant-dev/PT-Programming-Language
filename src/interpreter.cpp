@@ -67,7 +67,12 @@ void Interpreter::interpret(std::vector<std::unique_ptr<Stmt>>& stmts) {
 }
 
 std::string Interpreter::formatValue(const PTValue& val) {
-  if (val.isFunction) return "<fn>";
+  if (val.isFunction) {
+    if (val.function && !val.function->name.empty()) return "<fn " + val.function->name + ">";
+    return "<fn>";
+  }
+  if (val.isClass) return "<class " + val.klass->name + ">";
+  if (val.isInstance) return "<instance of " + val.instance->klass->name + ">";
   if (val.isArray) {
     std::string s = "[";
     for (size_t i = 0; i < val.array->size(); i++) {
@@ -130,8 +135,9 @@ void Interpreter::execute(Stmt& stmt) {
     }
   } else if (auto* f = dynamic_cast<FunctionStmt*>(&stmt)) {
     auto func = std::make_shared<PTFunction>();
+    func->name = f->name;
     func->params = f->params;
-    func->body = std::move(f->body);
+    func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(f->body));
     func->closure = env;
     defineVar(f->name, PTValue(func));
   } else if (auto* r = dynamic_cast<ReturnStmt*>(&stmt)) {
@@ -142,6 +148,17 @@ void Interpreter::execute(Stmt& stmt) {
     throw BreakException();
   } else if (dynamic_cast<ContinueStmt*>(&stmt)) {
     throw ContinueException();
+  } else if (auto* rp = dynamic_cast<RepeatStmt*>(&stmt)) {
+    for (int i = 0; i < rp->count; i++) {
+      try {
+        auto repeatEnv = std::make_shared<Environment>(env);
+        auto prev = env;
+        env = repeatEnv;
+        for (auto& s : rp->body) execute(*s);
+        env = prev;
+      } catch (const BreakException&) { break; }
+        catch (const ContinueException&) { continue; }
+    }
   } else if (auto* fr = dynamic_cast<ForStmt*>(&stmt)) {
     auto forEnv = std::make_shared<Environment>(env);
     auto prev = env;
@@ -230,6 +247,56 @@ void Interpreter::execute(Stmt& stmt) {
     } else {
       for (auto& s : stmts) execute(*s);
     }
+  } else if (auto* cs = dynamic_cast<ClassStmt*>(&stmt)) {
+    auto klass = std::make_shared<PTClass>();
+    klass->name = cs->name;
+    klass->parentName = cs->parent;
+
+    if (!cs->parent.empty()) {
+      auto parentVal = getVar(cs->parent);
+      if (!parentVal.isClass) throw PTRuntimeError("'" + cs->parent + "' is not a class");
+      klass->parent = parentVal.klass;
+    }
+
+    for (auto& sm : cs->staticMethods) {
+      auto func = std::make_shared<PTFunction>();
+      func->name = sm->name;
+      func->params = sm->params;
+      func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(sm->body));
+      func->closure = env;
+      func->isStatic = true;
+      klass->staticMethods[sm->name] = PTValue(func);
+    }
+
+    auto prev = env;
+    auto classEnv = std::make_shared<Environment>(env);
+    env = classEnv;
+
+    for (auto& m : cs->methods) {
+      auto func = std::make_shared<PTFunction>();
+      func->name = m->name;
+      func->params = m->params;
+      func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(m->body));
+      func->closure = env;
+      if (m->name == "init") func->isInit = true;
+      klass->methods[m->name] = PTValue(func);
+    }
+
+    klass->fields = std::move(cs->fields);
+    env = prev;
+
+    for (auto& [k, v] : klass->staticMethods) {
+      defineVar(k, v);
+    }
+    defineVar(cs->name, PTValue(klass));
+  } else if (auto* es = dynamic_cast<EnumStmt*>(&stmt)) {
+    auto m = std::make_shared<std::unordered_map<std::string, PTValue>>();
+    for (size_t i = 0; i < es->values.size(); i++) {
+      (*m)[es->values[i]] = PTValue(formatNumber(std::to_string((long long)i)));
+    }
+    defineVar(es->name, PTValue(m));
+  } else if (auto* ex = dynamic_cast<ExportStmt*>(&stmt)) {
+    execute(*ex->func);
   }
 }
 
@@ -259,6 +326,31 @@ PTValue Interpreter::evaluate(Expr* expr) {
   }
   if (auto* v = dynamic_cast<Variable*>(expr)) return getVar(v->name);
   if (auto* g = dynamic_cast<Grouping*>(expr)) return evaluate(g->expression.get());
+  if (dynamic_cast<ThisExpr*>(expr)) {
+    return getVar("this");
+  }
+  if (auto* se = dynamic_cast<SuperExpr*>(expr)) {
+    auto thisVal = getVar("this");
+    if (!thisVal.isInstance) throw PTRuntimeError("'super' can only be used in a method");
+    auto instance = thisVal.instance;
+    auto parent = instance->klass->parent;
+    if (!parent) throw PTRuntimeError("No parent class to call super on");
+    auto methodIt = parent->methods.find(se->method);
+    if (methodIt == parent->methods.end()) throw PTRuntimeError("Undefined parent method '" + se->method + "'");
+    auto method = methodIt->second.function;
+    auto methodEnv = std::make_shared<Environment>(method->closure);
+    methodEnv->values["this"] = thisVal;
+    auto prev = env;
+    env = methodEnv;
+    PTValue result;
+    try {
+      for (auto& s : *method->body) execute(*s);
+    } catch (const ReturnException& re) {
+      result = re.value;
+    }
+    env = prev;
+    return result;
+  }
   if (auto* t = dynamic_cast<TernaryExpr*>(expr)) {
     auto cond = evaluate(t->condition.get());
     if (isTruthy(cond)) return evaluate(t->trueBranch.get());
@@ -268,32 +360,109 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto right = evaluate(u->right.get());
     if (right.isFunction || right.isArray) throw PTRuntimeError("Cannot use unary on function or array");
     if (u->op == "-") return PTValue(formatNumber(std::to_string(-std::stod(right.value))));
-    if (u->op == "!") return PTValue(isTruthy(right) ? "false" : "true");
+    if (u->op == "!" || u->op == "not") return PTValue(isTruthy(right) ? "false" : "true");
+  }
+  if (auto* pe = dynamic_cast<PostfixExpr*>(expr)) {
+    auto val = evaluate(pe->operand.get());
+    if (pe->op == "++") {
+      if (val.isFunction || val.isArray || val.isMap) throw PTRuntimeError("Cannot increment non-number");
+      double d = std::stod(val.value);
+      PTValue result(formatNumber(std::to_string(d + 1)));
+      if (auto* v = dynamic_cast<Variable*>(pe->operand.get())) assignVar(v->name, result);
+      return result;
+    }
+    if (pe->op == "--") {
+      if (val.isFunction || val.isArray || val.isMap) throw PTRuntimeError("Cannot decrement non-number");
+      double d = std::stod(val.value);
+      PTValue result(formatNumber(std::to_string(d - 1)));
+      if (auto* v = dynamic_cast<Variable*>(pe->operand.get())) assignVar(v->name, result);
+      return result;
+    }
+  }
+  if (auto* lc = dynamic_cast<ListCompExpr*>(expr)) {
+    auto iterable = evaluate(lc->iterable.get());
+    if (!iterable.isArray) throw PTRuntimeError("List comprehension requires an array");
+    auto result = std::make_shared<std::vector<PTValue>>();
+    for (auto& elem : *iterable.array) {
+      auto loopEnv = std::make_shared<Environment>(env);
+      auto prev = env;
+      env = loopEnv;
+      env->values[lc->variable] = elem;
+      if (lc->condition) {
+        auto cond = evaluate(lc->condition.get());
+        if (isTruthy(cond)) {
+          result->push_back(evaluate(lc->element.get()));
+        }
+      } else {
+        result->push_back(evaluate(lc->element.get()));
+      }
+      env = prev;
+    }
+    return PTValue(result);
   }
   if (auto* b = dynamic_cast<Binary*>(expr)) {
     auto left = evaluate(b->left.get());
     auto right = evaluate(b->right.get());
+
+    if (b->op == "in") {
+      if (right.isArray) {
+        for (auto& elem : *right.array)
+          if (isEqual(elem, left)) return PTValue("true");
+        return PTValue("false");
+      }
+      if (right.isMap) {
+        return PTValue(right.map->count(left.value) ? "true" : "false");
+      }
+      if (!right.isFunction) {
+        return PTValue(right.value.find(left.value) != std::string::npos ? "true" : "false");
+      }
+      throw PTRuntimeError("'in' requires array, map, or string on right side");
+    }
+
     if (left.isFunction || right.isFunction) throw PTRuntimeError("Cannot use binary on function");
 
     if (b->op == "+") {
-      if (left.isArray || right.isArray) throw PTRuntimeError("Cannot add arrays");
+      if (left.isArray || right.isArray) throw PTRuntimeError("Cannot add arrays with +");
       char* e1, *e2;
       double l = std::strtod(left.value.c_str(), &e1);
       double r = std::strtod(right.value.c_str(), &e2);
       if (*e1 == 0 && *e2 == 0) return PTValue(formatNumber(std::to_string(l + r)));
       return PTValue(left.value + right.value);
     }
+
+    if (b->op == "*") {
+      if ((left.isArray || right.isArray) && !(left.isArray && right.isArray))
+        throw PTRuntimeError("Cannot multiply arrays");
+      char* e1, *e2;
+      double l = std::strtod(left.value.c_str(), &e1);
+      double r = std::strtod(right.value.c_str(), &e2);
+      if (*e1 == 0 && *e2 == 0) return PTValue(formatNumber(std::to_string(l * r)));
+      if (*e1 == 0 && *e2 != 0 && !right.isArray && !right.isMap && !right.isFunction) {
+        std::string result;
+        for (int i = 0; i < (int)l; i++) result += right.value;
+        return PTValue(result);
+      }
+      if (*e1 != 0 && *e2 == 0 && !left.isArray && !left.isMap && !left.isFunction) {
+        std::string result;
+        for (int i = 0; i < (int)r; i++) result += left.value;
+        return PTValue(result);
+      }
+      throw PTRuntimeError("Cannot multiply non-numbers");
+    }
+
     if (b->op == "==") return PTValue(isEqual(left, right) ? "true" : "false");
     if (b->op == "!=") return PTValue(isEqual(left, right) ? "false" : "true");
     if (b->op == "is") return PTValue(isEqual(left, right) ? "true" : "false");
     if (b->op == "isnt") return PTValue(isEqual(left, right) ? "false" : "true");
+
     if (left.isArray || right.isArray) throw PTRuntimeError("Cannot use arithmetic on arrays");
+    if (left.isMap || right.isMap) throw PTRuntimeError("Cannot use arithmetic on maps");
     if (!left.isFunction && !left.isArray && left.value.find_first_not_of("0123456789.eE+-") != std::string::npos)
       throw PTRuntimeError("Left operand must be a number");
     if (!right.isFunction && !right.isArray && right.value.find_first_not_of("0123456789.eE+-") != std::string::npos)
       throw PTRuntimeError("Right operand must be a number");
+
     if (b->op == "-") return PTValue(formatNumber(std::to_string(std::stod(left.value) - std::stod(right.value))));
-    if (b->op == "*") return PTValue(formatNumber(std::to_string(std::stod(left.value) * std::stod(right.value))));
     if (b->op == "/") {
       double r = std::stod(right.value);
       if (r == 0) throw PTRuntimeError("Division by zero");
@@ -304,10 +473,6 @@ PTValue Interpreter::evaluate(Expr* expr) {
       if (r == 0) throw PTRuntimeError("Modulo by zero");
       return PTValue(formatNumber(std::to_string(std::fmod(std::stod(left.value), r))));
     }
-    if (b->op == "==") return PTValue(isEqual(left, right) ? "true" : "false");
-    if (b->op == "!=") return PTValue(isEqual(left, right) ? "false" : "true");
-    if (b->op == "is") return PTValue(isEqual(left, right) ? "true" : "false");
-    if (b->op == "isnt") return PTValue(isEqual(left, right) ? "false" : "true");
     double l = std::stod(left.value), r = std::stod(right.value);
     if (b->op == "<") return PTValue(l < r ? "true" : "false");
     if (b->op == "<=") return PTValue(l <= r ? "true" : "false");
@@ -344,14 +509,57 @@ PTValue Interpreter::evaluate(Expr* expr) {
   }
   if (auto* de = dynamic_cast<DotExpr*>(expr)) {
     auto obj = evaluate(de->object.get());
+    if (obj.isInstance) {
+      auto& inst = obj.instance;
+      if (inst->fields.count(de->name)) return inst->fields[de->name];
+      if (inst->klass->methods.count(de->name)) {
+        auto method = inst->klass->methods[de->name].function;
+        auto methodFunc = std::make_shared<PTFunction>();
+        methodFunc->name = method->name;
+        methodFunc->params = method->params;
+        methodFunc->body = method->body;
+        methodFunc->closure = method->closure;
+        auto methodEnv = std::make_shared<Environment>(methodFunc->closure);
+        methodEnv->values["this"] = obj;
+        methodFunc->closure = methodEnv;
+        return PTValue(methodFunc);
+      }
+      if (inst->klass->parent) {
+        if (inst->klass->parent->methods.count(de->name)) {
+          auto method = inst->klass->parent->methods[de->name].function;
+          auto methodFunc = std::make_shared<PTFunction>();
+          methodFunc->name = method->name;
+          methodFunc->params = method->params;
+        methodFunc->body = method->body;
+          methodFunc->closure = method->closure;
+          auto methodEnv = std::make_shared<Environment>(methodFunc->closure);
+          methodEnv->values["this"] = obj;
+          methodFunc->closure = methodEnv;
+          return PTValue(methodFunc);
+        }
+      }
+      throw PTRuntimeError("Undefined property '" + de->name + "'");
+    }
+    if (obj.isClass) {
+      if (obj.klass->staticMethods.count(de->name))
+        return obj.klass->staticMethods[de->name];
+      if (obj.klass->methods.count(de->name))
+        return obj.klass->methods[de->name];
+      throw PTRuntimeError("Undefined property '" + de->name + "'");
+    }
     if (obj.isMap) {
       if (!obj.map->count(de->name)) throw PTRuntimeError("Undefined property '" + de->name + "'");
       return (*obj.map)[de->name];
     }
-    throw PTRuntimeError("Cannot access property on non-map");
+    throw PTRuntimeError("Cannot access property on non-map, class, or instance");
   }
   if (auto* da = dynamic_cast<DotAssignExpr*>(expr)) {
     auto obj = evaluate(da->object.get());
+    if (obj.isInstance) {
+      auto val = evaluate(da->value.get());
+      obj.instance->fields[da->name] = val;
+      return val;
+    }
     if (!obj.isMap) throw PTRuntimeError("Cannot assign property on non-map");
     auto val = evaluate(da->value.get());
     (*obj.map)[da->name] = val;
@@ -403,21 +611,69 @@ PTValue Interpreter::evaluate(Expr* expr) {
     }
 
     auto callee = evaluate(c->callee.get());
+
+    if (callee.isClass) {
+      auto instance = std::make_shared<PTInstance>();
+      instance->klass = callee.klass;
+      auto instanceVal = PTValue(instance);
+      std::vector<PTClass*> chain;
+      for (auto* k = callee.klass.get(); k; k = k->parent.get()) chain.push_back(k);
+      for (int ci = (int)chain.size() - 1; ci >= 0; ci--) {
+        for (auto& [fname, fexpr] : chain[ci]->fields) {
+          if (fexpr) {
+            instance->fields[fname] = evaluate(fexpr.get());
+          } else {
+            instance->fields[fname] = PTValue();
+          }
+        }
+      }
+      PTFunction* initFunc = nullptr;
+      for (auto* k : chain) {
+        auto it = k->methods.find("init");
+        if (it != k->methods.end()) { initFunc = it->second.function.get(); break; }
+      }
+      if (initFunc) {
+        auto callEnv = std::make_shared<Environment>(initFunc->closure);
+        callEnv->values["this"] = instanceVal;
+        auto prev = env;
+        env = callEnv;
+        for (size_t i = 0; i < initFunc->params.size(); i++) {
+          PTValue argVal;
+          if (i < c->arguments.size()) argVal = evaluate(c->arguments[i].get());
+          callEnv->values[initFunc->params[i]] = argVal;
+        }
+        try { for (auto& s : *initFunc->body) execute(*s); }
+        catch (const ReturnException&) {}
+        env = prev;
+      }
+      return instanceVal;
+    }
+
     if (!callee.isFunction) throw PTRuntimeError("Can only call functions");
     auto& fn = callee.function;
-    if (c->arguments.size() != fn->params.size())
-      throw PTRuntimeError("Expected " + std::to_string(fn->params.size()) +
-                               " arguments but got " + std::to_string(c->arguments.size()));
+
+    size_t argCount = c->arguments.size();
+    size_t paramCount = fn->params.size();
+    if (argCount < paramCount) {
+      bool allDefaults = true;
+      for (size_t i = argCount; i < paramCount; i++) {
+        if (i >= fn->params.size()) { allDefaults = false; break; }
+      }
+      if (!allDefaults) throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
+    }
+    if (argCount > paramCount) throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
 
     auto callEnv = std::make_shared<Environment>(fn->closure);
-    for (size_t i = 0; i < fn->params.size(); i++)
-      callEnv->values[fn->params[i]] = evaluate(c->arguments[i].get());
+    for (size_t i = 0; i < fn->params.size(); i++) {
+      if (i < c->arguments.size())
+        callEnv->values[fn->params[i]] = evaluate(c->arguments[i].get());
+    }
 
     auto prev = env;
     env = callEnv;
     PTValue result;
     try {
-      for (auto& stmt : fn->body) execute(*stmt);
+      for (auto& stmt : *fn->body) execute(*stmt);
     } catch (const ReturnException& re) {
       result = re.value;
     }
@@ -431,7 +687,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
   if (auto* le = dynamic_cast<LambdaExpr*>(expr)) {
     auto func = std::make_shared<PTFunction>();
     func->params = le->params;
-    func->body = std::move(le->body);
+    func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(le->body));
     func->closure = env;
     return PTValue(func);
   }
@@ -446,15 +702,33 @@ PTValue Interpreter::evaluate(Expr* expr) {
     }
     return PTValue(result);
   }
+  if (auto* me = dynamic_cast<MatchExpr*>(expr)) {
+    auto value = evaluate(me->value.get());
+    for (auto& mc : me->cases) {
+      for (auto& pattern : mc->patterns) {
+        auto patVal = evaluate(pattern.get());
+        if (isEqual(value, patVal)) {
+          auto matchEnv = std::make_shared<Environment>(env);
+          auto prev = env;
+          env = matchEnv;
+          auto result = evaluate(mc->body.get());
+          env = prev;
+          return result;
+        }
+      }
+    }
+    throw PTRuntimeError("No matching case in match expression");
+  }
   throw PTRuntimeError("Unknown expression");
 }
 
 PTValue Interpreter::evaluateFunction(const PTValue& fnVal, const std::vector<PTValue>& args) {
   if (!fnVal.isFunction) throw PTRuntimeError("Can only call functions");
   auto& fn = fnVal.function;
-  if ((int)args.size() != (int)fn->params.size())
-    throw PTRuntimeError("Expected " + std::to_string(fn->params.size()) +
-                             " arguments but got " + std::to_string(args.size()));
+
+  if (args.size() < fn->params.size() || args.size() > fn->params.size())
+    throw PTRuntimeError("Expected " + std::to_string(fn->params.size()) + " arguments but got " + std::to_string(args.size()));
+
   auto funcEnv = std::make_shared<Environment>(fn->closure);
   for (size_t i = 0; i < fn->params.size(); i++)
     funcEnv->values[fn->params[i]] = args[i];
@@ -462,7 +736,7 @@ PTValue Interpreter::evaluateFunction(const PTValue& fnVal, const std::vector<PT
   env = funcEnv;
   PTValue result;
   try {
-    for (auto& stmt : fn->body) execute(*stmt);
+    for (auto& stmt : *fn->body) execute(*stmt);
   } catch (const ReturnException& re) {
     result = re.value;
   }
@@ -589,6 +863,8 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
     if (arg.isFunction) return PTValue("function");
     if (arg.isArray) return PTValue("array");
     if (arg.isMap) return PTValue("map");
+    if (arg.isClass) return PTValue("class");
+    if (arg.isInstance) return PTValue("instance");
     if (arg.value == "nil") return PTValue("nil");
     bool isNum = false;
     try { std::stod(arg.value); isNum = true; } catch (...) {}
@@ -782,10 +1058,6 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
     if (!fn.isFunction) throw PTRuntimeError("map() expects a function");
     auto result = std::make_shared<std::vector<PTValue>>();
     for (auto& elem : *arr.array) {
-      auto argExpr = std::make_unique<Literal>(formatValue(elem), false, true);
-      std::vector<std::unique_ptr<Expr>> callArgs;
-      callArgs.push_back(std::move(argExpr));
-      auto callExpr = std::make_unique<Call>(std::make_unique<Literal>("", false, true), std::move(callArgs));
       auto val = evaluateFunction(fn, {elem});
       result->push_back(val);
     }
@@ -854,7 +1126,8 @@ bool Interpreter::isTruthy(const PTValue& val) {
   if (val.isFunction) return true;
   if (val.isArray) return val.array->size() > 0;
   if (val.isMap) return val.map->size() > 0;
-  if (val.value == "false" || val.value == "nil") return false;
+  if (val.isClass || val.isInstance) return true;
+  if (val.value == "false" || val.value == "nil" || val.value == "0" || val.value == "") return false;
   return true;
 }
 
@@ -881,7 +1154,7 @@ bool Interpreter::isEqual(const PTValue& a, const PTValue& b) {
 
 std::string Interpreter::formatNumber(const std::string& val) {
   double d = std::stod(val);
-  if (d == std::floor(d)) return std::to_string((long long)d);
+  if (d == std::floor(d) && !std::isinf(d) && std::abs(d) < 1e15) return std::to_string((long long)d);
   std::string s = std::to_string(d);
   s.erase(s.find_last_not_of('0') + 1, std::string::npos);
   if (s.back() == '.') s.pop_back();

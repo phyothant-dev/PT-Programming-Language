@@ -8,17 +8,24 @@ static const std::unordered_map<std::string, TokenType> keywords = {
   {"while", TokenType::WHILE}, {"for", TokenType::FOR},
   {"fun", TokenType::FUN}, {"return", TokenType::RETURN},
   {"break", TokenType::BREAK}, {"continue", TokenType::CONTINUE},
+  {"in", TokenType::IN},
   {"true", TokenType::TRUE}, {"false", TokenType::FALSE},
   {"nil", TokenType::NIL},
-  {"and", TokenType::AND}, {"or", TokenType::OR},
-  {"in", TokenType::IN},
+  {"and", TokenType::AND}, {"or", TokenType::OR}, {"not", TokenType::NOT},
   {"let", TokenType::VAR}, {"fn", TokenType::FUN},
   {"unless", TokenType::UNLESS}, {"loop", TokenType::LOOP},
   {"is", TokenType::IS}, {"isnt", TokenType::ISNT},
   {"try", TokenType::TRY}, {"catch", TokenType::CATCH},
   {"finally", TokenType::FINALLY}, {"throw", TokenType::THROW},
-  {"import", TokenType::IMPORT},
+  {"import", TokenType::IMPORT}, {"export", TokenType::EXPORT},
   {"const", TokenType::CONST},
+  {"elif", TokenType::ELIF}, {"repeat", TokenType::REPEAT},
+  {"match", TokenType::MATCH},
+  {"class", TokenType::CLASS}, {"struct", TokenType::STRUCT},
+  {"enum", TokenType::ENUM}, {"super", TokenType::SUPER},
+  {"this", TokenType::THIS},
+  {"static", TokenType::STATIC},
+  {"exit", TokenType::RETURN},
 };
 
 std::vector<Token> Lexer::scan() {
@@ -65,8 +72,8 @@ void Lexer::scanToken() {
     case '.': addToken(TokenType::DOT); break;
     case '?': addToken(TokenType::QUESTION); break;
     case ':': addToken(TokenType::COLON); break;
-    case '+': addToken(match('=') ? TokenType::PLUS_EQ : TokenType::PLUS); break;
-    case '-': addToken(match('=') ? TokenType::MINUS_EQ : TokenType::MINUS); break;
+    case '+': addToken(match('+') ? TokenType::PLUS_PLUS : match('=') ? TokenType::PLUS_EQ : TokenType::PLUS); break;
+    case '-': addToken(match('-') ? TokenType::MINUS_MINUS : match('=') ? TokenType::MINUS_EQ : TokenType::MINUS); break;
     case '*': addToken(match('=') ? TokenType::STAR_EQ : TokenType::STAR); break;
     case '%': addToken(match('=') ? TokenType::PERCENT_EQ : TokenType::PERCENT); break;
     case '/':
@@ -80,6 +87,7 @@ void Lexer::scanToken() {
     case ' ': case '\r': case '\t': break;
     case '\n': line++; break;
     case '"': string_(); break;
+    case '`': backtickString(); break;
     default:
       if (isDigit(c)) number();
       else if (isAlpha(c)) identifier();
@@ -108,6 +116,18 @@ void Lexer::string_() {
       result += peek();
       advance();
     }
+  }
+  if (isAtEnd()) throw std::runtime_error("Unterminated string at line " + std::to_string(line));
+  advance();
+  addToken(TokenType::STRING, result);
+}
+
+void Lexer::backtickString() {
+  std::string result;
+  while (peek() != '`' && !isAtEnd()) {
+    if (peek() == '\n') line++;
+    result += peek();
+    advance();
   }
   if (isAtEnd()) throw std::runtime_error("Unterminated string at line " + std::to_string(line));
   advance();

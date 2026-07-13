@@ -31,6 +31,7 @@ std::unique_ptr<Stmt> Parser::statement() {
   if (match({TokenType::UNLESS})) return unlessStmt();
   if (match({TokenType::WHILE})) return whileStmt();
   if (match({TokenType::LOOP})) return loopStmt();
+  if (match({TokenType::REPEAT})) return repeatStmt();
   if (match({TokenType::FUN})) return funStmt();
   if (match({TokenType::RETURN})) return returnStmt();
   if (match({TokenType::BREAK})) {
@@ -45,13 +46,17 @@ std::unique_ptr<Stmt> Parser::statement() {
   if (match({TokenType::PRINT_NL})) return printStmt();
   if (match({TokenType::TRY})) return tryStmt();
   if (match({TokenType::IMPORT})) return importStmt();
+  if (match({TokenType::EXPORT})) return exportStmt();
+  if (match({TokenType::MATCH})) return matchStmt();
+  if (match({TokenType::CLASS})) return classStmt();
+  if (match({TokenType::ENUM})) return enumStmt();
   if (match({TokenType::LBRACE})) return blockStmt();
   if (match({TokenType::VAR})) return varStmt();
   if (match({TokenType::CONST})) return constStmt();
   return exprStmt();
 }
 
-std::unique_ptr<Stmt> Parser::funStmt() {
+std::unique_ptr<FunctionStmt> Parser::functionStmt() {
   Token name = consume(TokenType::IDENTIFIER, "Expect function name");
   consume(TokenType::LPAREN, "Expect '(' after function name");
   std::vector<std::string> params;
@@ -74,6 +79,10 @@ std::unique_ptr<Stmt> Parser::funStmt() {
   consume(TokenType::LBRACE, "Expect '{' before function body");
   auto body = block();
   return std::make_unique<FunctionStmt>(name.value, params, std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::funStmt() {
+  return functionStmt();
 }
 
 std::unique_ptr<Stmt> Parser::returnStmt() {
@@ -127,6 +136,14 @@ std::unique_ptr<Stmt> Parser::importStmt() {
   return std::make_unique<ImportStmt>(pathToken.value, alias);
 }
 
+std::unique_ptr<Stmt> Parser::exportStmt() {
+  auto func = funStmt();
+  auto f = dynamic_cast<FunctionStmt*>(func.get());
+  if (!f) throw std::runtime_error("Export can only export functions");
+  func.release();
+  return std::make_unique<ExportStmt>(std::unique_ptr<FunctionStmt>(f));
+}
+
 std::unique_ptr<Stmt> Parser::blockStmt() {
   auto stmts = block();
   return std::make_unique<BlockStmt>(std::move(stmts));
@@ -145,6 +162,8 @@ std::unique_ptr<Stmt> Parser::ifStmt() {
     } else {
       elseB = statement();
     }
+  } else if (match({TokenType::ELIF})) {
+    elseB = ifStmt();
   }
   return std::make_unique<IfStmt>(std::move(cond), std::move(thenB), std::move(elseB));
 }
@@ -171,6 +190,84 @@ std::unique_ptr<Stmt> Parser::loopStmt() {
   auto body = statement();
   auto trueLit = std::make_unique<Literal>("true", false, false, true);
   return std::make_unique<WhileStmt>(std::move(trueLit), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::repeatStmt() {
+  auto countToken = consume(TokenType::NUMBER, "Expect count after 'repeat'");
+  int count = std::stoi(countToken.value);
+  consume(TokenType::LBRACE, "Expect '{' after repeat count");
+  auto body = block();
+  return std::make_unique<RepeatStmt>(count, std::move(body));
+}
+
+std::unique_ptr<Expr> Parser::matchExpr() {
+  consume(TokenType::LPAREN, "Expect '(' after 'match'");
+  auto value = expression();
+  consume(TokenType::RPAREN, "Expect ')' after match value");
+  consume(TokenType::LBRACE, "Expect '{' after match");
+  std::vector<std::unique_ptr<MatchCase>> cases;
+  while (!check(TokenType::RBRACE) && !check(TokenType::EOF_)) {
+    std::vector<std::unique_ptr<Expr>> patterns;
+    do {
+      patterns.push_back(expression());
+    } while (match({TokenType::COMMA}));
+    consume(TokenType::ARROW, "Expect '=>' after match pattern");
+    auto body = expression();
+    cases.push_back(std::make_unique<MatchCase>(std::move(patterns), std::move(body)));
+  }
+  consume(TokenType::RBRACE, "Expect '}' after match cases");
+  return std::make_unique<MatchExpr>(std::move(value), std::move(cases));
+}
+
+std::unique_ptr<Stmt> Parser::matchStmt() {
+  auto expr = matchExpr();
+  return std::make_unique<ExprStmt>(std::move(expr));
+}
+
+std::unique_ptr<Stmt> Parser::classStmt() {
+  Token name = consume(TokenType::IDENTIFIER, "Expect class name");
+  std::string parent;
+  if (match({TokenType::LT})) {
+    parent = consume(TokenType::IDENTIFIER, "Expect parent class name").value;
+  }
+  consume(TokenType::LBRACE, "Expect '{' after class name");
+  std::vector<std::unique_ptr<FunctionStmt>> methods;
+  std::vector<std::unique_ptr<FunctionStmt>> staticMethods;
+  std::vector<std::pair<std::string, std::unique_ptr<Expr>>> fields;
+  while (!check(TokenType::RBRACE) && !check(TokenType::EOF_)) {
+    if (match({TokenType::STATIC})) {
+      if (match({TokenType::FUN})) {
+        staticMethods.push_back(functionStmt());
+      } else {
+        Token fieldName = consume(TokenType::IDENTIFIER, "Expect field name");
+        std::unique_ptr<Expr> init;
+        if (match({TokenType::EQ})) init = expression();
+        consume(TokenType::SEMICOLON, "Expect ';' after field");
+        fields.push_back({fieldName.value, std::move(init)});
+      }
+    } else if (match({TokenType::FUN})) {
+      methods.push_back(functionStmt());
+    } else {
+      Token fieldName = consume(TokenType::IDENTIFIER, "Expect field name");
+      std::unique_ptr<Expr> init;
+      if (match({TokenType::EQ})) init = expression();
+      consume(TokenType::SEMICOLON, "Expect ';' after field");
+      fields.push_back({fieldName.value, std::move(init)});
+    }
+  }
+  consume(TokenType::RBRACE, "Expect '}' after class body");
+  return std::make_unique<ClassStmt>(name.value, parent, std::move(methods), std::move(staticMethods), std::move(fields));
+}
+
+std::unique_ptr<Stmt> Parser::enumStmt() {
+  Token name = consume(TokenType::IDENTIFIER, "Expect enum name");
+  consume(TokenType::LBRACE, "Expect '{' after enum name");
+  std::vector<std::string> values;
+  do {
+    values.push_back(consume(TokenType::IDENTIFIER, "Expect enum value").value);
+  } while (match({TokenType::COMMA}));
+  consume(TokenType::RBRACE, "Expect '}' after enum values");
+  return std::make_unique<EnumStmt>(name.value, std::move(values));
 }
 
 std::unique_ptr<Stmt> Parser::forStmt() {
@@ -300,7 +397,7 @@ std::unique_ptr<Expr> Parser::and_() {
 
 std::unique_ptr<Expr> Parser::equality() {
   auto expr = comparison();
-  while (match({TokenType::EQ_EQ, TokenType::BANG_EQ, TokenType::IS, TokenType::ISNT})) {
+  while (match({TokenType::EQ_EQ, TokenType::BANG_EQ, TokenType::IS, TokenType::ISNT, TokenType::IN})) {
     auto op = previous().value;
     auto right = comparison();
     expr = std::make_unique<Binary>(std::move(expr), op, std::move(right));
@@ -339,7 +436,7 @@ std::unique_ptr<Expr> Parser::factor() {
 }
 
 std::unique_ptr<Expr> Parser::unary() {
-  if (match({TokenType::BANG, TokenType::MINUS})) {
+  if (match({TokenType::BANG, TokenType::MINUS, TokenType::NOT})) {
     auto op = previous().value;
     auto right = unary();
     return std::make_unique<Unary>(op, std::move(right));
@@ -368,6 +465,12 @@ std::unique_ptr<Expr> Parser::call() {
       auto index = expression();
       consume(TokenType::RBRACKET, "Expect ']' after index");
       expr = std::make_unique<IndexExpr>(std::move(expr), std::move(index));
+    } else if (match({TokenType::PLUS_PLUS})) {
+      auto op = previous().value;
+      expr = std::make_unique<PostfixExpr>(std::move(expr), op);
+    } else if (match({TokenType::MINUS_MINUS})) {
+      auto op = previous().value;
+      expr = std::make_unique<PostfixExpr>(std::move(expr), op);
     } else {
       break;
     }
@@ -412,10 +515,32 @@ std::unique_ptr<Expr> Parser::primary() {
     return std::make_unique<Literal>("nil", false, false, false, true);
   if (match({TokenType::IDENTIFIER}))
     return std::make_unique<Variable>(previous().value);
+  if (match({TokenType::THIS}))
+    return std::make_unique<ThisExpr>();
+  if (match({TokenType::MATCH}))
+    return matchExpr();
+  if (match({TokenType::SUPER})) {
+    consume(TokenType::DOT, "Expect '.' after 'super'");
+    auto method = consume(TokenType::IDENTIFIER, "Expect method name after 'super.'");
+    return std::make_unique<SuperExpr>(method.value);
+  }
   if (match({TokenType::LBRACKET})) {
+    auto first = expression();
+    if (match({TokenType::FOR})) {
+      auto varName = consume(TokenType::IDENTIFIER, "Expect variable name after 'for'").value;
+      consume(TokenType::IN, "Expect 'in' after variable name in list comprehension");
+      auto iterable = expression();
+      std::unique_ptr<Expr> cond;
+      if (match({TokenType::IF})) {
+        cond = expression();
+      }
+      consume(TokenType::RBRACKET, "Expect ']' after list comprehension");
+      return std::make_unique<ListCompExpr>(std::move(first), std::move(varName), std::move(iterable), std::move(cond));
+    }
     std::vector<std::unique_ptr<Expr>> elements;
-    if (!check(TokenType::RBRACKET)) {
-      do { elements.push_back(expression()); } while (match({TokenType::COMMA}));
+    elements.push_back(std::move(first));
+    while (match({TokenType::COMMA})) {
+      elements.push_back(expression());
     }
     consume(TokenType::RBRACKET, "Expect ']' after array elements");
     return std::make_unique<ArrayExpr>(std::move(elements));
@@ -424,7 +549,13 @@ std::unique_ptr<Expr> Parser::primary() {
     std::vector<std::pair<std::unique_ptr<Expr>, std::unique_ptr<Expr>>> entries;
     if (!check(TokenType::RBRACE)) {
       do {
-        auto key = expression();
+        std::unique_ptr<Expr> key;
+        if (check(TokenType::IDENTIFIER) && tokens[current + 1].type == TokenType::COLON) {
+          Token keyTok = advance();
+          key = std::make_unique<Literal>(keyTok.value, false, false, false, false);
+        } else {
+          key = expression();
+        }
         consume(TokenType::COLON, "Expect ':' after map key");
         auto val = expression();
         entries.push_back({std::move(key), std::move(val)});

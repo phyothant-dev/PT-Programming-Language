@@ -46,9 +46,16 @@ private:
   std::unique_ptr<Stmt> whileStmt();
   std::unique_ptr<Stmt> loopStmt();
   std::unique_ptr<Stmt> funStmt();
+  std::unique_ptr<FunctionStmt> functionStmt();
   std::unique_ptr<Stmt> returnStmt();
   std::unique_ptr<Stmt> forEachStmt();
   std::unique_ptr<Stmt> tryStmt();
   std::unique_ptr<Stmt> importStmt();
+  std::unique_ptr<Stmt> repeatStmt();
+  std::unique_ptr<Stmt> classStmt();
+  std::unique_ptr<Stmt> enumStmt();
+  std::unique_ptr<Stmt> exportStmt();
+  std::unique_ptr<Stmt> matchStmt();
+  std::unique_ptr<Expr> matchExpr();
   std::vector<std::unique_ptr<Stmt>> block();
 };

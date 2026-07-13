@@ -21,6 +21,7 @@ private:
   void addToken(TokenType type, std::string value);
   void scanToken();
   void string_();
+  void backtickString();
   void number();
   void identifier();
   bool isDigit(char c);
