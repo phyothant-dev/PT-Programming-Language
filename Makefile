@@ -1,6 +1,6 @@
 CXX      := g++
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra
-SRC      := src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.cpp
+SRC      := src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.cpp src/http.cpp
 TARGET   := pt
 
 .PHONY: all clean test install uninstall windows

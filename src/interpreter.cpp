@@ -1,6 +1,10 @@
 #include "interpreter.h"
 #include "lexer.h"
 #include "parser.h"
+#include "http.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -1118,6 +1122,99 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
     auto now = std::chrono::steady_clock::now();
     double secs = std::chrono::duration<double>(now.time_since_epoch()).count();
     return PTValue(formatNumber(std::to_string(secs)));
+  }
+  if (name == "fileExists") {
+    if (args.size() != 1) throw PTRuntimeError("fileExists() expects 1 argument");
+    auto path = evaluate(args[0].get());
+    std::ifstream f(path.value);
+    return PTValue(f.good() ? "true" : "false");
+  }
+  if (name == "httpListen") {
+    if (args.size() != 2) throw PTRuntimeError("httpListen(port, handler) expects 2 arguments");
+    auto portVal = evaluate(args[0].get());
+    int port = (int)std::stod(portVal.value);
+    auto handler = evaluate(args[1].get());
+    if (!handler.isFunction) throw PTRuntimeError("httpListen() second argument must be a function");
+
+    int server_fd = httpCreateServer(port);
+    if (server_fd < 0) throw PTRuntimeError("Could not create server on port " + std::to_string(port));
+
+    std::cout << "PT Server running at http://localhost:" << port << std::endl;
+    std::cout << "Press Ctrl+C to stop." << std::endl;
+
+    while (true) {
+      struct sockaddr_in clientAddr{};
+      socklen_t clientLen = sizeof(clientAddr);
+      int client_fd = accept(server_fd, (struct sockaddr*)&clientAddr, &clientLen);
+      if (client_fd < 0) continue;
+
+      std::string rawReq = httpReadRequest(client_fd);
+      HttpRequest req = httpParseRequest(rawReq);
+
+      auto reqMap = std::make_shared<std::unordered_map<std::string, PTValue>>();
+      (*reqMap)["method"] = PTValue(req.method);
+      (*reqMap)["path"] = PTValue(req.path);
+      (*reqMap)["body"] = PTValue(req.body);
+      auto hdrMap = std::make_shared<std::unordered_map<std::string, PTValue>>();
+      for (auto& [k, v] : req.headers) (*hdrMap)[k] = PTValue(v);
+      (*reqMap)["headers"] = PTValue(hdrMap);
+
+      std::string method = req.method;
+      std::string path = req.path;
+      std::cout << method << " " << path << std::endl;
+
+      auto savedEnv = env;
+      auto handlerEnv = std::make_shared<Environment>(handler.function->closure);
+      handlerEnv->values["req"] = PTValue(reqMap);
+      env = handlerEnv;
+
+      PTValue response;
+      try {
+        for (auto& s : *handler.function->body) execute(*s);
+      } catch (const ReturnException& re) {
+        response = re.value;
+      } catch (const PTRuntimeError& err) {
+        env = savedEnv;
+        std::string errMsg = err.what();
+        std::string errorHtml = "<html><body><h1>500 Internal Server Error</h1><p>" + errMsg + "</p></body></html>";
+        httpSendResponse(client_fd, 500, "Internal Server Error", "text/html", errorHtml);
+        httpClose(client_fd);
+        continue;
+      }
+      env = savedEnv;
+
+      int status = 200;
+      std::string statusText = "OK";
+      std::string contentType = "text/html";
+      std::string body;
+
+      if (response.isMap) {
+        if (response.map->count("status")) {
+          status = (int)std::stod((*response.map)["status"].value);
+          if (status == 404) statusText = "Not Found";
+          else if (status == 500) statusText = "Internal Server Error";
+          else if (status == 301) statusText = "Moved Permanently";
+          else if (status == 201) statusText = "Created";
+          else statusText = "OK";
+        }
+        if (response.map->count("headers")) {
+          auto& respHeaders = (*response.map)["headers"];
+          if (respHeaders.isMap && respHeaders.map->count("content-type")) {
+            contentType = (*respHeaders.map)["content-type"].value;
+          }
+        }
+        if (response.map->count("body")) body = (*response.map)["body"].value;
+        else if (response.map->count("html")) body = (*response.map)["html"].value;
+      } else {
+        body = formatValue(response);
+      }
+
+      httpSendResponse(client_fd, status, statusText, contentType, body);
+      httpClose(client_fd);
+    }
+
+    httpClose(server_fd);
+    return PTValue();
   }
   return PTValue(std::make_shared<PTFunction>());
 }
