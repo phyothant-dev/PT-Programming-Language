@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <cmath>
+#include <cctype>
 
 class ReturnException : public std::exception {
 public:
@@ -48,8 +49,10 @@ bool Interpreter::varExists(const std::string& name) {
 }
 
 void Interpreter::interpret(std::vector<std::unique_ptr<Stmt>>& stmts) {
-  globals = std::make_shared<Environment>();
-  env = globals;
+  if (!globals) {
+    globals = std::make_shared<Environment>();
+    env = globals;
+  }
   try {
     for (auto& stmt : stmts) execute(*stmt);
   } catch (const ReturnException&) {}
@@ -133,6 +136,30 @@ void Interpreter::execute(Stmt& stmt) {
     }
 
     env = prev;
+  } else if (auto* fe = dynamic_cast<ForEachStmt*>(&stmt)) {
+    auto iterable = evaluate(fe->iterable.get());
+    if (iterable.isFunction) throw std::runtime_error("for-each requires an array or string");
+    auto forEachEnv = std::make_shared<Environment>(env);
+    auto prev = env;
+    env = forEachEnv;
+    if (iterable.isArray) {
+      for (auto& elem : *iterable.array) {
+        env->values[fe->variable] = elem;
+        try {
+          execute(*fe->body);
+        } catch (const BreakException&) { break; }
+        catch (const ContinueException&) { continue; }
+      }
+    } else {
+      for (char c : iterable.value) {
+        env->values[fe->variable] = PTValue(std::string(1, c));
+        try {
+          execute(*fe->body);
+        } catch (const BreakException&) { break; }
+        catch (const ContinueException&) { continue; }
+      }
+    }
+    env = prev;
   }
 }
 
@@ -162,6 +189,11 @@ PTValue Interpreter::evaluate(Expr* expr) {
   }
   if (auto* v = dynamic_cast<Variable*>(expr)) return getVar(v->name);
   if (auto* g = dynamic_cast<Grouping*>(expr)) return evaluate(g->expression.get());
+  if (auto* t = dynamic_cast<TernaryExpr*>(expr)) {
+    auto cond = evaluate(t->condition.get());
+    if (isTruthy(cond)) return evaluate(t->trueBranch.get());
+    return evaluate(t->falseBranch.get());
+  }
   if (auto* u = dynamic_cast<Unary*>(expr)) {
     auto right = evaluate(u->right.get());
     if (right.isFunction || right.isArray) throw std::runtime_error("Cannot use unary on function or array");
@@ -185,6 +217,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
     if (b->op == "-") return PTValue(formatNumber(std::to_string(std::stod(left.value) - std::stod(right.value))));
     if (b->op == "*") return PTValue(formatNumber(std::to_string(std::stod(left.value) * std::stod(right.value))));
     if (b->op == "/") return PTValue(formatNumber(std::to_string(std::stod(left.value) / std::stod(right.value))));
+    if (b->op == "%") return PTValue(formatNumber(std::to_string(std::fmod(std::stod(left.value), std::stod(right.value)))));
     if (b->op == "==") return PTValue(isEqual(left, right) ? "true" : "false");
     if (b->op == "!=") return PTValue(isEqual(left, right) ? "false" : "true");
     double l = std::stod(left.value), r = std::stod(right.value);
@@ -213,25 +246,35 @@ PTValue Interpreter::evaluate(Expr* expr) {
     return PTValue(arr);
   }
   if (auto* ix = dynamic_cast<IndexExpr*>(expr)) {
-    auto arr = evaluate(ix->callee.get());
-    if (!arr.isArray) throw std::runtime_error("Can only index into arrays");
+    auto callee = evaluate(ix->callee.get());
     auto idx = evaluate(ix->index.get());
-    if (idx.isArray || idx.isFunction) throw std::runtime_error("Array index must be a number");
+    if (idx.isArray || idx.isFunction) throw std::runtime_error("Index must be a number");
     int i = (int)std::stod(idx.value);
-    if (i < 0 || i >= (int)arr.array->size())
-      throw std::runtime_error("Index out of bounds");
-    return (*arr.array)[i];
+    if (callee.isArray) {
+      int size = (int)callee.array->size();
+      if (i < 0) i += size;
+      if (i < 0 || i >= size) throw std::runtime_error("Index out of bounds");
+      return (*callee.array)[i];
+    }
+    if (!callee.isFunction && !callee.isArray) {
+      int size = (int)callee.value.size();
+      if (i < 0) i += size;
+      if (i < 0 || i >= size) throw std::runtime_error("String index out of bounds");
+      return PTValue(std::string(1, callee.value[i]));
+    }
+    throw std::runtime_error("Cannot index into this value");
   }
   if (auto* ai = dynamic_cast<AssignIndex*>(expr)) {
-    auto arr = evaluate(ai->callee.get());
-    if (!arr.isArray) throw std::runtime_error("Can only index into arrays");
+    auto callee = evaluate(ai->callee.get());
+    if (!callee.isArray) throw std::runtime_error("Can only assign index into arrays");
     auto idx = evaluate(ai->index.get());
     if (idx.isArray || idx.isFunction) throw std::runtime_error("Array index must be a number");
     int i = (int)std::stod(idx.value);
-    if (i < 0 || i >= (int)arr.array->size())
-      throw std::runtime_error("Index out of bounds");
+    int size = (int)callee.array->size();
+    if (i < 0) i += size;
+    if (i < 0 || i >= size) throw std::runtime_error("Index out of bounds");
     auto val = evaluate(ai->value.get());
-    (*arr.array)[i] = val;
+    (*callee.array)[i] = val;
     return val;
   }
   if (auto* c = dynamic_cast<Call*>(expr)) {
@@ -332,6 +375,162 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
     std::ofstream file(path.value);
     if (!file.is_open()) return PTValue("false");
     file << content.value;
+    return PTValue("true");
+  }
+  if (name == "abs") {
+    if (args.size() != 1) throw std::runtime_error("abs() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("abs() expects a number");
+    return PTValue(formatNumber(std::to_string(std::fabs(std::stod(arg.value)))));
+  }
+  if (name == "sqrt") {
+    if (args.size() != 1) throw std::runtime_error("sqrt() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("sqrt() expects a number");
+    return PTValue(formatNumber(std::to_string(std::sqrt(std::stod(arg.value)))));
+  }
+  if (name == "min") {
+    if (args.size() != 2) throw std::runtime_error("min() expects 2 arguments");
+    auto a = evaluate(args[0].get());
+    auto b = evaluate(args[1].get());
+    if (a.isArray || a.isFunction || b.isArray || b.isFunction) throw std::runtime_error("min() expects numbers");
+    double da = std::stod(a.value), db = std::stod(b.value);
+    return PTValue(formatNumber(std::to_string(da < db ? da : db)));
+  }
+  if (name == "max") {
+    if (args.size() != 2) throw std::runtime_error("max() expects 2 arguments");
+    auto a = evaluate(args[0].get());
+    auto b = evaluate(args[1].get());
+    if (a.isArray || a.isFunction || b.isArray || b.isFunction) throw std::runtime_error("max() expects numbers");
+    double da = std::stod(a.value), db = std::stod(b.value);
+    return PTValue(formatNumber(std::to_string(da > db ? da : db)));
+  }
+  if (name == "floor") {
+    if (args.size() != 1) throw std::runtime_error("floor() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("floor() expects a number");
+    return PTValue(formatNumber(std::to_string((long long)std::floor(std::stod(arg.value)))));
+  }
+  if (name == "ceil") {
+    if (args.size() != 1) throw std::runtime_error("ceil() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("ceil() expects a number");
+    return PTValue(formatNumber(std::to_string((long long)std::ceil(std::stod(arg.value)))));
+  }
+  if (name == "round") {
+    if (args.size() != 1) throw std::runtime_error("round() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("round() expects a number");
+    return PTValue(formatNumber(std::to_string((long long)std::round(std::stod(arg.value)))));
+  }
+  if (name == "type") {
+    if (args.size() != 1) throw std::runtime_error("type() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isFunction) return PTValue("function");
+    if (arg.isArray) return PTValue("array");
+    if (arg.value == "nil") return PTValue("nil");
+    bool isNum = false;
+    try { std::stod(arg.value); isNum = true; } catch (...) {}
+    if (isNum) return PTValue("number");
+    return PTValue("string");
+  }
+  if (name == "upper") {
+    if (args.size() != 1) throw std::runtime_error("upper() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("upper() expects a string");
+    std::string s = arg.value;
+    for (auto& c : s) c = std::toupper(c);
+    return PTValue(s);
+  }
+  if (name == "lower") {
+    if (args.size() != 1) throw std::runtime_error("lower() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("lower() expects a string");
+    std::string s = arg.value;
+    for (auto& c : s) c = std::tolower(c);
+    return PTValue(s);
+  }
+  if (name == "trim") {
+    if (args.size() != 1) throw std::runtime_error("trim() expects 1 argument");
+    auto arg = evaluate(args[0].get());
+    if (arg.isArray || arg.isFunction) throw std::runtime_error("trim() expects a string");
+    std::string s = arg.value;
+    size_t start = s.find_first_not_of(" \t\n\r");
+    if (start == std::string::npos) return PTValue("");
+    size_t end = s.find_last_not_of(" \t\n\r");
+    return PTValue(s.substr(start, end - start + 1));
+  }
+  if (name == "substr") {
+    if (args.size() < 2 || args.size() > 3) throw std::runtime_error("substr() expects 2 or 3 arguments");
+    auto str = evaluate(args[0].get());
+    if (str.isArray || str.isFunction) throw std::runtime_error("substr() expects a string");
+    auto startArg = evaluate(args[1].get());
+    int start = (int)std::stod(startArg.value);
+    int len = (int)str.value.size() - start;
+    if (args.size() == 3) {
+      auto lenArg = evaluate(args[2].get());
+      len = (int)std::stod(lenArg.value);
+    }
+    if (start < 0 || start >= (int)str.value.size()) throw std::runtime_error("substr() start out of bounds");
+    if (start + len > (int)str.value.size()) len = (int)str.value.size() - start;
+    return PTValue(str.value.substr(start, len));
+  }
+  if (name == "contains") {
+    if (args.size() != 2) throw std::runtime_error("contains() expects 2 arguments");
+    auto str = evaluate(args[0].get());
+    auto sub = evaluate(args[1].get());
+    if (str.isArray || str.isFunction) throw std::runtime_error("contains() expects a string");
+    if (sub.isArray || sub.isFunction) throw std::runtime_error("contains() expects a string");
+    return PTValue(str.value.find(sub.value) != std::string::npos ? "true" : "false");
+  }
+  if (name == "replace") {
+    if (args.size() != 3) throw std::runtime_error("replace() expects 3 arguments");
+    auto str = evaluate(args[0].get());
+    auto old = evaluate(args[1].get());
+    auto newStr = evaluate(args[2].get());
+    if (str.isArray || str.isFunction) throw std::runtime_error("replace() expects a string");
+    if (old.isArray || old.isFunction) throw std::runtime_error("replace() expects a string");
+    if (newStr.isArray || newStr.isFunction) throw std::runtime_error("replace() expects a string");
+    std::string result = str.value;
+    size_t pos = 0;
+    while ((pos = result.find(old.value, pos)) != std::string::npos) {
+      result.replace(pos, old.value.size(), newStr.value);
+      pos += newStr.value.size();
+    }
+    return PTValue(result);
+  }
+  if (name == "split") {
+    if (args.size() != 2) throw std::runtime_error("split() expects 2 arguments");
+    auto str = evaluate(args[0].get());
+    auto delim = evaluate(args[1].get());
+    if (str.isArray || str.isFunction) throw std::runtime_error("split() expects a string");
+    if (delim.isArray || delim.isFunction) throw std::runtime_error("split() expects a string");
+    auto arr = std::make_shared<std::vector<PTValue>>();
+    std::string s = str.value;
+    std::string d = delim.value;
+    if (d.empty()) {
+      for (char c : s) arr->push_back(std::string(1, c));
+    } else {
+      size_t pos = 0;
+      while ((pos = s.find(d)) != std::string::npos) {
+        arr->push_back(s.substr(0, pos));
+        s.erase(0, pos + d.size());
+      }
+      arr->push_back(s);
+    }
+    return PTValue(arr);
+  }
+  if (name == "assert") {
+    if (args.size() < 1 || args.size() > 2) throw std::runtime_error("assert() expects 1 or 2 arguments");
+    auto cond = evaluate(args[0].get());
+    if (!isTruthy(cond)) {
+      std::string msg = "Assertion failed";
+      if (args.size() == 2) {
+        auto m = evaluate(args[1].get());
+        msg = m.value;
+      }
+      throw std::runtime_error(msg);
+    }
     return PTValue("true");
   }
   return PTValue(std::make_shared<PTFunction>());

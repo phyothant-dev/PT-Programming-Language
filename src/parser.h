@@ -22,6 +22,7 @@ private:
 
   std::unique_ptr<Expr> expression();
   std::unique_ptr<Expr> assignment();
+  std::unique_ptr<Expr> ternary();
   std::unique_ptr<Expr> or_();
   std::unique_ptr<Expr> and_();
   std::unique_ptr<Expr> equality();
@@ -42,5 +43,6 @@ private:
   std::unique_ptr<Stmt> whileStmt();
   std::unique_ptr<Stmt> funStmt();
   std::unique_ptr<Stmt> returnStmt();
+  std::unique_ptr<Stmt> forEachStmt();
   std::vector<std::unique_ptr<Stmt>> block();
 };

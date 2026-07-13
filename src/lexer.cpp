@@ -11,6 +11,7 @@ static const std::unordered_map<std::string, TokenType> keywords = {
   {"true", TokenType::TRUE}, {"false", TokenType::FALSE},
   {"nil", TokenType::NIL},
   {"and", TokenType::AND}, {"or", TokenType::OR},
+  {"in", TokenType::IN},
 };
 
 std::vector<Token> Lexer::scan() {
@@ -55,12 +56,15 @@ void Lexer::scanToken() {
     case ';': addToken(TokenType::SEMICOLON); break;
     case ',': addToken(TokenType::COMMA); break;
     case '.': addToken(TokenType::DOT); break;
-    case '+': addToken(TokenType::PLUS); break;
-    case '-': addToken(TokenType::MINUS); break;
-    case '*': addToken(TokenType::STAR); break;
+    case '?': addToken(TokenType::QUESTION); break;
+    case ':': addToken(TokenType::COLON); break;
+    case '+': addToken(match('=') ? TokenType::PLUS_EQ : TokenType::PLUS); break;
+    case '-': addToken(match('=') ? TokenType::MINUS_EQ : TokenType::MINUS); break;
+    case '*': addToken(match('=') ? TokenType::STAR_EQ : TokenType::STAR); break;
+    case '%': addToken(match('=') ? TokenType::PERCENT_EQ : TokenType::PERCENT); break;
     case '/':
       if (match('/')) { while (peek() != '\n' && !isAtEnd()) advance(); }
-      else { addToken(TokenType::SLASH); }
+      else { addToken(match('=') ? TokenType::SLASH_EQ : TokenType::SLASH); }
       break;
     case '=': addToken(match('=') ? TokenType::EQ_EQ : TokenType::EQ); break;
     case '!': addToken(match('=') ? TokenType::BANG_EQ : TokenType::BANG); break;

@@ -112,6 +112,19 @@ std::unique_ptr<Stmt> Parser::whileStmt() {
 std::unique_ptr<Stmt> Parser::forStmt() {
   consume(TokenType::LPAREN, "Expect '(' after 'for'");
 
+  if (check(TokenType::IDENTIFIER)) {
+    Token varName = peek();
+    Token next = tokens[current + 1];
+    if (next.type == TokenType::IN) {
+      advance();
+      advance();
+      auto iterable = expression();
+      consume(TokenType::RPAREN, "Expect ')' after for-each iterable");
+      auto body = statement();
+      return std::make_unique<ForEachStmt>(varName.value, std::move(iterable), std::move(body));
+    }
+  }
+
   std::unique_ptr<Stmt> init;
   if (match({TokenType::VAR})) init = varStmt();
   else if (match({TokenType::SEMICOLON})) init = nullptr;
@@ -142,7 +155,7 @@ std::vector<std::unique_ptr<Stmt>> Parser::block() {
 std::unique_ptr<Expr> Parser::expression() { return assignment(); }
 
 std::unique_ptr<Expr> Parser::assignment() {
-  auto expr = or_();
+  auto expr = ternary();
   if (match({TokenType::EQ})) {
     auto value = assignment();
     if (auto* v = dynamic_cast<Variable*>(expr.get()))
@@ -152,6 +165,28 @@ std::unique_ptr<Expr> Parser::assignment() {
       return std::make_unique<AssignIndex>(std::move(raw->callee), std::move(raw->index), std::move(value));
     }
     throw std::runtime_error("Invalid assignment target");
+  }
+  if (match({TokenType::PLUS_EQ, TokenType::MINUS_EQ, TokenType::STAR_EQ, TokenType::SLASH_EQ, TokenType::PERCENT_EQ})) {
+    auto opToken = previous().value;
+    auto value = assignment();
+    std::string binOp(1, opToken[0]);
+    if (auto* v = dynamic_cast<Variable*>(expr.get())) {
+      auto varExpr = std::make_unique<Variable>(v->name);
+      auto bin = std::make_unique<Binary>(std::move(varExpr), binOp, std::move(value));
+      return std::make_unique<Assign>(v->name, std::move(bin));
+    }
+    throw std::runtime_error("Invalid assignment target");
+  }
+  return expr;
+}
+
+std::unique_ptr<Expr> Parser::ternary() {
+  auto expr = or_();
+  if (match({TokenType::QUESTION})) {
+    auto trueBranch = expression();
+    consume(TokenType::COLON, "Expect ':' after true branch of ternary");
+    auto falseBranch = assignment();
+    return std::make_unique<TernaryExpr>(std::move(expr), std::move(trueBranch), std::move(falseBranch));
   }
   return expr;
 }
@@ -208,7 +243,7 @@ std::unique_ptr<Expr> Parser::term() {
 
 std::unique_ptr<Expr> Parser::factor() {
   auto expr = unary();
-  while (match({TokenType::STAR, TokenType::SLASH})) {
+  while (match({TokenType::STAR, TokenType::SLASH, TokenType::PERCENT})) {
     auto op = previous().value;
     auto right = unary();
     expr = std::make_unique<Binary>(std::move(expr), op, std::move(right));

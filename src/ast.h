@@ -75,6 +75,14 @@ struct AssignIndex : Expr {
     : callee(std::move(c)), index(std::move(i)), value(std::move(v)) {}
 };
 
+struct TernaryExpr : Expr {
+  std::unique_ptr<Expr> condition;
+  std::unique_ptr<Expr> trueBranch;
+  std::unique_ptr<Expr> falseBranch;
+  TernaryExpr(std::unique_ptr<Expr> c, std::unique_ptr<Expr> t, std::unique_ptr<Expr> f)
+    : condition(std::move(c)), trueBranch(std::move(t)), falseBranch(std::move(f)) {}
+};
+
 struct Stmt {
   virtual ~Stmt() = default;
 };
@@ -137,4 +145,12 @@ struct ForStmt : Stmt {
   std::unique_ptr<Stmt> body;
   ForStmt(std::unique_ptr<Stmt> i, std::unique_ptr<Expr> c, std::unique_ptr<Expr> inc, std::unique_ptr<Stmt> b)
     : initializer(std::move(i)), condition(std::move(c)), increment(std::move(inc)), body(std::move(b)) {}
+};
+
+struct ForEachStmt : Stmt {
+  std::string variable;
+  std::unique_ptr<Expr> iterable;
+  std::unique_ptr<Stmt> body;
+  ForEachStmt(std::string v, std::unique_ptr<Expr> it, std::unique_ptr<Stmt> b)
+    : variable(std::move(v)), iterable(std::move(it)), body(std::move(b)) {}
 };
