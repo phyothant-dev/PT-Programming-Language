@@ -710,6 +710,16 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto value = evaluate(me->value.get());
     for (auto& mc : me->cases) {
       for (auto& pattern : mc->patterns) {
+        if (auto* var = dynamic_cast<Variable*>(pattern.get())) {
+          if (var->name == "_") {
+            auto matchEnv = std::make_shared<Environment>(env);
+            auto prev = env;
+            env = matchEnv;
+            auto result = evaluate(mc->body.get());
+            env = prev;
+            return result;
+          }
+        }
         auto patVal = evaluate(pattern.get());
         if (isEqual(value, patVal)) {
           auto matchEnv = std::make_shared<Environment>(env);

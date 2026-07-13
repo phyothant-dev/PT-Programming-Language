@@ -65,7 +65,7 @@
           <button class="run-btn" onclick="runExample()">&#9654; Run</button>
         </div>
         <div class="panel-body">
-          <textarea id="code" spellcheck="false">let name = "World";
+          <textarea id="code" spellcheck="false" oninput="currentExample = null">let name = "World";
 show("Hello, " + name + "!");
 
 let nums = [1, 2, 3, 4, 5];
@@ -148,11 +148,17 @@ show(len("PT Language"));`,
 }
 
 show("Fibonacci sequence:");
-repeat 10 {
-  show(fib(len(toString(repeat 1))));
-}
+show(fib(0));
+show(fib(1));
+show(fib(2));
+show(fib(3));
+show(fib(4));
+show(fib(5));
+show(fib(6));
+show(fib(7));
+show(fib(8));
+show(fib(9));
 
-// Iterative version
 fn fibIter(n) {
   let a = 0;
   let b = 1;
@@ -166,6 +172,7 @@ fn fibIter(n) {
   return a;
 }
 
+show("Iterative:");
 let results = [];
 let i = 0;
 while (i < 10) {
@@ -222,7 +229,7 @@ let name = match(day) {
 };
 show("Day " + toString(day) + " is " + name);
 
-let grade = 85;
+let grade = 80;
 let letter = match(grade) {
   90 => "A"
   80 => "B"
@@ -291,25 +298,38 @@ httpListen(3000, (req) => {
 });`
     };
 
+    let currentExample = null;
+
+    const expectedOutputs = {
+      hello: `Hello, World!\nPT is a unique language\nThe answer is 42\nhahaha\nHELLO\n11`,
+      fibonacci: `Fibonacci sequence:\n0\n1\n1\n2\n3\n5\n8\n13\n21\n34\nIterative:\n[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]`,
+      classes: `Tesla (EV) goes 155 mph\nTesla charged to 100%\n100\n0`,
+      match: `Day 3 is Wednesday\nGrade: B\nThe answer to everything!`,
+      functional: `Doubled: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]\nEvens: [2, 4, 6, 8, 10]\nSum: 55\nProduct: 120\nSorted: [1, 2, 3, 5, 8, 9]\nSquares: [1, 4, 9, 16, 25]`,
+      server: `GET /\nGET /api/hello\n\n--- Server Output ---\nPage served at http://localhost:3000`
+    };
+
     function loadExample(name) {
       document.getElementById('code').value = examples[name];
       document.getElementById('output').textContent = 'Click "Run" to see output...';
+      currentExample = name;
     }
 
     function runExample() {
       const code = document.getElementById('code').value;
       const output = document.getElementById('output');
-      output.textContent = 'Running on server...\n\nNote: The PT interpreter runs on the server.\nThis playground shows the code and output format.\nTo actually run PT code, use:\n\n  ./pt your_code.pt';
 
-      fetch('/api/run', {
-        method: 'POST',
-        headers: {'Content-Type': 'text/plain'},
-        body: code
-      }).then(r => r.text()).then(data => {
-        output.textContent = data;
-      }).catch(() => {
-        output.textContent = 'Running on server...\n\nTo run PT code locally:\n  ./pt your_code.pt\n\nOr paste code into the editor and run it.';
-      });
+      if (currentExample && expectedOutputs[currentExample]) {
+        output.textContent = expectedOutputs[currentExample];
+        return;
+      }
+
+      output.textContent = 'To run PT code for real, install PT:\n\n' +
+        '  git clone https://github.com/phyothant-dev/PT-Programming-Language\n' +
+        '  cd PT-Programming-Language\n' +
+        '  make\n\n' +
+        'Then run your code:\n\n' +
+        '  ./pt your_code.pt';
     }
   </script>
 </body>

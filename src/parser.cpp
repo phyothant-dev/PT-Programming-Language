@@ -525,6 +525,10 @@ std::unique_ptr<Expr> Parser::primary() {
     return std::make_unique<SuperExpr>(method.value);
   }
   if (match({TokenType::LBRACKET})) {
+    if (check(TokenType::RBRACKET)) {
+      advance();
+      return std::make_unique<ArrayExpr>(std::vector<std::unique_ptr<Expr>>());
+    }
     auto first = expression();
     if (match({TokenType::FOR})) {
       auto varName = consume(TokenType::IDENTIFIER, "Expect variable name after 'for'").value;

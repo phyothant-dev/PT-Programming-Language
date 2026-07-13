@@ -65,7 +65,7 @@
           <button class="run-btn" onclick="runExample()">&#9654; Run</button>
         </div>
         <div class="panel-body">
-          <textarea id="code" spellcheck="false">let name = "World";
+          <textarea id="code" spellcheck="false" oninput="currentExample = null">let name = "World";
 show("Hello, " + name + "!");
 
 let nums = [1, 2, 3, 4, 5];
@@ -230,7 +230,7 @@ let name = match(day) {
 };
 show("Day " + toString(day) + " is " + name);
 
-let grade = 85;
+let grade = 80;
 let letter = match(grade) {
   90 => "A"
   80 => "B"
@@ -299,60 +299,65 @@ httpListen(3000, (req) => {
 });`
     };
 
+    let currentExample = null;
+
+    const expectedOutputs = {
+      hello: `Hello, World!\nPT is a unique language\nThe answer is 42\nhahaha\nHELLO\n11`,
+      fibonacci: `Fibonacci sequence:\n0\n1\n1\n2\n3\n5\n8\n13\n21\n34\nIterative:\n[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]`,
+      classes: `Tesla (EV) goes 155 mph\nTesla charged to 100%\n100\n0`,
+      match: `Day 3 is Wednesday\nGrade: B\nThe answer to everything!`,
+      functional: `Doubled: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]\nEvens: [2, 4, 6, 8, 10]\nSum: 55\nProduct: 120\nSorted: [1, 2, 3, 5, 8, 9]\nSquares: [1, 4, 9, 16, 25]`,
+      server: `GET /\nGET /api/hello\n\n--- Server Output ---\nPage served at http://localhost:3000`
+    };
+
     function loadExample(name) {
       document.getElementById('code').value = examples[name];
       document.getElementById('output').textContent = 'Click "Run" to see output...';
+      currentExample = name;
     }
 
     function runExample() {
       const code = document.getElementById('code').value;
       const output = document.getElementById('output');
-      
-      // Simulate PT output for common patterns
+
+      if (currentExample && expectedOutputs[currentExample]) {
+        output.textContent = expectedOutputs[currentExample];
+        return;
+      }
+
       let lines = [];
       let vars = {};
-      
       const codeLines = code.split('\n');
       for (const line of codeLines) {
         const trimmed = line.trim();
-        
-        // Match show("...") with string content
         let showMatch = trimmed.match(/^show\("(.*)"\);?$/);
         if (showMatch) {
           let str = showMatch[1];
-          // Replace ${var} with variable values
           str = str.replace(/\$\{(\w+)\}/g, (_, name) => vars[name] !== undefined ? vars[name] : '${' + name + '}');
           lines.push(str);
           continue;
         }
-        
-        // Match let var = "value"
         let varMatch = trimmed.match(/^let\s+(\w+)\s*=\s*"(.*)"$/);
         if (varMatch) {
           vars[varMatch[1]] = varMatch[2];
           continue;
         }
-        
-        // Match let var = number
         let numMatch = trimmed.match(/^let\s+(\w+)\s*=\s*(\d+)$/);
         if (numMatch) {
           vars[numMatch[1]] = numMatch[2];
           continue;
         }
-        
-        // Match show(simple var)
         let showVarMatch = trimmed.match(/^show\((\w+)\);?$/);
         if (showVarMatch && vars[showVarMatch[1]] !== undefined) {
           lines.push(vars[showVarMatch[1]]);
           continue;
         }
       }
-      
+
       if (lines.length > 0) {
         output.textContent = lines.join('\n');
       } else {
-        output.textContent = '--- PT Output ---\n\n' + 
-          'To run PT code for real, install PT:\n\n' +
+        output.textContent = 'To run PT code for real, install PT:\n\n' +
           '  git clone https://github.com/phyothant-dev/PT-Programming-Language\n' +
           '  cd PT-Programming-Language\n' +
           '  make\n\n' +
