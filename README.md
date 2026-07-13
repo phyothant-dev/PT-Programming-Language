@@ -2,37 +2,139 @@
 
 A simple, readable programming language implemented in C++17 — built by [Phyo Thant](https://github.com/phyothant-dev) as a learning project in language design and implementation.
 
-## Quick Install
+---
+
+## Installation
+
+### macOS
+
+**Option A: One-line install (recommended)**
+
+Open Terminal and run:
 
 ```sh
 curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
 ```
 
-Or clone and build manually:
+**Option B: Install with make**
 
 ```sh
+# 1. Install Xcode Command Line Tools (if not installed)
+xcode-select --install
+
+# 2. Clone and build
 git clone https://github.com/phyothant-dev/PT-Programming-Language.git
 cd PT-Programming-Language
 make
-make install    # installs to /usr/local/bin
+
+# 3. Install to /usr/local/bin (optional, so you can run 'pt' from anywhere)
+make install
 ```
+
+### Linux (Ubuntu / Debian)
+
+```sh
+# 1. Install build tools
+sudo apt update
+sudo apt install -y git g++
+
+# 2. One-line install
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
+```
+
+### Linux (Fedora / RHEL / CentOS)
+
+```sh
+# 1. Install build tools
+sudo dnf install -y git gcc-c++
+
+# 2. One-line install
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
+```
+
+### Linux (Arch / Manjaro)
+
+```sh
+# 1. Install build tools
+sudo pacman -S git gcc
+
+# 2. One-line install
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
+```
+
+### Windows
+
+PT runs on Windows through WSL (Windows Subsystem for Linux).
+
+**Step 1: Install WSL**
+
+Open PowerShell as Administrator and run:
+
+```powershell
+wsl --install
+```
+
+Restart your computer when prompted.
+
+**Step 2: Set up Ubuntu**
+
+Open the **Ubuntu** app from the Start menu. Create a username and password when asked.
+
+**Step 3: Install PT**
+
+Inside Ubuntu, paste:
+
+```sh
+sudo apt update && sudo apt install -y git g++ && \
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh
+```
+
+**Step 4: Start coding**
+
+```sh
+pt
+>> show("Hello from Windows!");
+```
+
+---
 
 ## Quick Start
 
 ```sh
-# Build
-make
+# Start the REPL (interactive mode)
+pt
 
 # Run a file
-./pt test.pt
+pt myfile.pt
+```
 
-# REPL mode
-./pt
+### Your first program
+
+Create a file called `hello.pt`:
+
+```pt
+show("Hello, World!");
+```
+
+Run it:
+
+```sh
+pt hello.pt
+```
+
+### Interactive REPL
+
+```sh
+pt
 >> let name = "World";
 >> show("Hello, " + name + "!");
 Hello, World!
+>> 2 + 3
+5
 >> exit
 ```
+
+---
 
 ## Features
 
@@ -280,19 +382,28 @@ input("name: ")           // reads a line from stdin
 ## Project Structure
 
 ```
-pt/
+PT-Programming-Language/
 ├── pt                  # compiled binary
 ├── Makefile            # build system
 ├── install.sh          # one-line installer
 ├── test.pt             # test suite (113 tests)
-├── src/
-│   ├── main.cpp        # entry point, REPL, file runner
-│   ├── token.h         # token type definitions
-│   ├── lexer.h/.cpp    # scanner — source → tokens
-│   ├── ast.h           # AST node definitions
-│   ├── parser.h/.cpp   # parser — tokens → AST
-│   └── interpreter.h/.cpp  # tree-walk interpreter
+├── README.md
+├── .gitignore
+└── src/
+    ├── main.cpp        # entry point, REPL, file runner
+    ├── token.h         # token type definitions
+    ├── lexer.h/.cpp    # scanner — source → tokens
+    ├── ast.h           # AST node definitions
+    ├── parser.h/.cpp   # parser — tokens → AST
+    └── interpreter.h/.cpp  # tree-walk interpreter
 ```
+
+## Requirements
+
+- **C++17 compiler** — g++ 7+ or clang++ 5+
+- **Git** — to clone the repository
+
+No other dependencies. No package managers. No runtime required.
 
 ## Grammar
 
