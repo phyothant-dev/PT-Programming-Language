@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 static const std::unordered_map<std::string, TokenType> keywords = {
-  {"var", TokenType::VAR}, {"print", TokenType::PRINT},
+  {"var", TokenType::VAR}, {"print", TokenType::PRINT}, {"show", TokenType::PRINT},
   {"if", TokenType::IF}, {"else", TokenType::ELSE},
   {"while", TokenType::WHILE}, {"for", TokenType::FOR},
   {"fun", TokenType::FUN}, {"return", TokenType::RETURN},

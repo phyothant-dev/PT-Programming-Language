@@ -47,7 +47,7 @@ g++ -std=c++17 -O2 -o pt src/main.cpp src/lexer.cpp src/parser.cpp src/interpret
 # REPL mode
 ./pt
 >> fn hello(name) {
-.. print("Hello, " + name + "!");
+.. show("Hello, " + name + "!");
 .. }
 >> hello("world");
 Hello, world!
@@ -314,10 +314,10 @@ program      → declaration* EOF
 declaration  → funDecl | varDecl | statement
 funDecl      → "fn" IDENTIFIER "(" parameters? ")" ( "->" expression ";" | block )
 varDecl      → ("let" | "var") IDENTIFIER ("=" expression)? ";"
-statement    → exprStmt | printStmt | block | ifStmt | unlessStmt | whileStmt
+statement    → exprStmt | showStmt | block | ifStmt | unlessStmt | whileStmt
              | loopStmt | forStmt | breakStmt | continueStmt | returnStmt
 exprStmt     → expression ";"
-printStmt    → "print" expression ";"
+showStmt     → "show" expression ";"
 block        → "{" declaration* "}"
 ifStmt       → "if" "(" expression ")" statement ("else" statement)?
 unlessStmt   → "unless" "(" expression ")" statement

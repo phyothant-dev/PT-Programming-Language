@@ -34,7 +34,7 @@ private:
   std::unique_ptr<Expr> primary();
 
   std::unique_ptr<Stmt> statement();
-  std::unique_ptr<Stmt> printStmt();
+  std::unique_ptr<Stmt> showStmt();
   std::unique_ptr<Stmt> exprStmt();
   std::unique_ptr<Stmt> varStmt();
   std::unique_ptr<Stmt> blockStmt();

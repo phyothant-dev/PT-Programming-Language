@@ -40,7 +40,7 @@ std::unique_ptr<Stmt> Parser::statement() {
     consume(TokenType::SEMICOLON, "Expect ';' after 'continue'");
     return std::make_unique<ContinueStmt>();
   }
-  if (match({TokenType::PRINT})) return printStmt();
+  if (match({TokenType::PRINT})) return showStmt();
   if (match({TokenType::LBRACE})) return blockStmt();
   if (match({TokenType::VAR})) return varStmt();
   return exprStmt();
@@ -78,7 +78,7 @@ std::unique_ptr<Stmt> Parser::returnStmt() {
   return std::make_unique<ReturnStmt>(std::move(value));
 }
 
-std::unique_ptr<Stmt> Parser::printStmt() {
+std::unique_ptr<Stmt> Parser::showStmt() {
   auto expr = expression();
   consume(TokenType::SEMICOLON, "Expect ';' after value");
   return std::make_unique<PrintStmt>(std::move(expr));
