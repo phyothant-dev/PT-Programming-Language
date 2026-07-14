@@ -73,70 +73,52 @@
         <tr><td>Git</td><td>To clone the repository</td></tr>
       </table>
 
-      <h3>One-Line Install (macOS / Linux)</h3>
-      <pre><code>curl -fsSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh</code></pre>
-
-      <h3>Build from Source</h3>
-
       <h3>macOS</h3>
-      <pre><code># Install Xcode Command Line Tools (if not installed)
+
+      <h3>Option A: One-line install (recommended)</h3>
+      <pre><code>curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh</code></pre>
+
+      <h3>Option B: Install with make</h3>
+      <pre><code># 1. Install Xcode Command Line Tools (if not installed)
 xcode-select --install
 
-# Clone and build
+# 2. Clone and build
 git clone https://github.com/phyothant-dev/PT-Programming-Language.git
 cd PT-Programming-Language
 make
 
-# Run
-./pt --version</code></pre>
+# 3. Install to /usr/local/bin (optional, so you can run 'pt' from anywhere)
+make install</code></pre>
 
       <h3>Linux (Ubuntu / Debian)</h3>
-      <pre><code># Install compiler and tools
+      <pre><code># 1. Install build tools
 sudo apt update
-sudo apt install g++ make git
+sudo apt install -y git g++
 
-# Clone and build
-git clone https://github.com/phyothant-dev/PT-Programming-Language.git
-cd PT-Programming-Language
-make
+# 2. One-line install
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh</code></pre>
 
-# Run
-./pt --version</code></pre>
+      <h3>Linux (Fedora / RHEL / CentOS)</h3>
+      <pre><code># 1. Install build tools
+sudo dnf install -y git gcc-c++
 
-      <h3>Linux (Fedora / RHEL)</h3>
-      <pre><code># Install compiler and tools
-sudo dnf install gcc-c++ make git
+# 2. One-line install
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh</code></pre>
 
-# Clone and build
-git clone https://github.com/phyothant-dev/PT-Programming-Language.git
-cd PT-Programming-Language
-make
+      <h3>Linux (Arch / Manjaro)</h3>
+      <pre><code># 1. Install build tools
+sudo pacman -S git gcc
 
-# Run
-./pt --version</code></pre>
+# 2. One-line install
+curl -sSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh</code></pre>
 
       <h3>Windows</h3>
-      <pre><code># Install MSYS2 from https://www.msys2.org
-# Open MSYS2 UCRT64 terminal, then:
-
-# Install compiler and tools
-pacman -S mingw-w64-ucrt-x86_64-gcc make git
-
-# Clone and build
-git clone https://github.com/phyothant-dev/PT-Programming-Language.git
-cd PT-Programming-Language
-make
-
-# Run
-./pt --version</code></pre>
-
-      <h3>Install to System Path</h3>
-      <pre><code># After building
-sudo make install    # installs to /usr/local/bin/pt
-
-# Then run from anywhere
-pt --version
-pt script.pt</code></pre>
+      <pre><code>1. Download PT-Windows.zip from Releases
+2. Extract the zip anywhere
+3. Right-click setup.bat → Run as administrator
+4. Done!</code></pre>
+      <p>After that, you can double-click any <code>.pt</code> file to run it, or open Command Prompt and type <code>pt your_program.pt</code>.</p>
+      <p>To uninstall: run <code>uninstall.bat</code> as administrator.</p>
 
       <h2 id="hello">Hello World</h2>
       <pre><code>show("Hello, World!");
