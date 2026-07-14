@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.008s | 60x faster |
-| **Python 3** | 0.051s | 9.4x faster |
-| **Ruby** | 0.050s | 9.2x faster |
-| **PT** | 0.48s | 1x |
+| **Node.js** (V8) | 0.008s | 56x faster |
+| **Python 3** | 0.051s | 9.1x faster |
+| **Ruby** | 0.050s | 8.9x faster |
+| **PT** | 0.45s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -24,9 +24,9 @@ Tests loop overhead and arithmetic.
 | Language | Time | Relative to PT |
 |----------|------|----------------|
 | **Ruby** | 0.000s | optimized `.sum` |
-| **Node.js** (V8) | 0.010s | 128x faster |
-| **Python 3** | 0.077s | 16.6x faster |
-| **PT** | 1.28s | 1x |
+| **Node.js** (V8) | 0.010s | 121x faster |
+| **Python 3** | 0.077s | 16.3x faster |
+| **PT** | 1.21s | 1x |
 
 ### String Concatenation — 100,000 iterations
 
@@ -34,9 +34,9 @@ Tests string allocation and memory handling.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.003s | 117x faster |
-| **Python 3** | 0.125s | **PT is 2.8x slower** |
-| **PT** | 0.35s | 1x |
+| **Node.js** (V8) | 0.003s | 122x faster |
+| **Python 3** | 0.125s | **PT is 2.9x slower** |
+| **PT** | 0.37s | 1x |
 | **Ruby** | 0.225s | **PT is 1.6x faster** |
 
 ### Array Push + Iterate — 100,000 items
@@ -45,28 +45,32 @@ Tests array allocation, push, and indexed access.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Python 3** | 0.002s | 18x faster |
-| **Ruby** | 0.003s | 12x faster |
-| **Node.js** (V8) | 0.003s | 12x faster |
-| **PT** | 0.036s | 1x |
+| **Python 3** | 0.002s | 16.5x faster |
+| **Ruby** | 0.003s | 11x faster |
+| **Node.js** (V8) | 0.003s | 11x faster |
+| **PT** | 0.033s | 1x |
 
 ## Summary Table
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.48s | 0.051s | 0.008s | 0.050s |
-| Loop 10M | 1.28s | 0.077s | 0.010s | ~0s |
-| String 100K | 0.35s | 0.125s | 0.003s | 0.225s |
-| Array 100K | 0.036s | 0.002s | 0.003s | 0.003s |
+| fib(30) | 0.45s | 0.051s | 0.008s | 0.050s |
+| Loop 10M | 1.21s | 0.077s | 0.010s | ~0s |
+| String 100K | 0.37s | 0.125s | 0.003s | 0.225s |
+| Array 100K | 0.033s | 0.002s | 0.003s | 0.003s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | After (v3) | Speedup |
+| Benchmark | Before (v1) | After (v4) | Speedup |
 |-----------|--------|-------|---------|
-| Loop 10M | 20.31s | 1.28s | **15.9x** |
-| Array 100K | 0.56s | 0.036s | **15.6x** |
-| String 100K | 0.63s | 0.35s | **1.8x** |
-| fib(30) | 28.48s | 0.48s | **59.3x** |
+| Loop 10M | 20.31s | 1.21s | **16.8x** |
+| Array 100K | 0.56s | 0.033s | **17.0x** |
+| String 100K | 0.63s | 0.37s | **1.7x** |
+| fib(30) | 28.48s | 0.45s | **63.3x** |
+
+### What was optimized (v4)
+
+1. **Variable interning** — all variable names are mapped to sequential integer IDs at first use via a `StringInterner`. Environment lookups, assignments, and constant checks now compare integers instead of strings, eliminating expensive `std::string::operator==` on every variable access.
 
 ### What was optimized (v3)
 
@@ -94,7 +98,7 @@ Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, in
 
 ## Where PT is competitive
 
-- **Fibonacci** — PT is now within **9x of Python** and **9x of Ruby** for function-call-heavy workloads (down from 433x).
+- **Fibonacci** — PT is now within **9.1x of Python** and **8.9x of Ruby** for function-call-heavy workloads (down from 433x).
 - **String operations** — PT's builtins (`replace`, `split`, `join`, `substr`) call C++ `std::string` directly. PT is **1.6x faster than Ruby** for string concatenation.
 - **Array operations** — `push`, `pop`, `len` use `std::vector` underneath.
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.

@@ -29,49 +29,49 @@ static const PTValue PT_TRUE(true);
 static const PTValue PT_FALSE(false);
 static const PTValue PT_NIL;
 
-void Interpreter::defineVar(const std::string& name, PTValue value) {
-  env->set(name, std::move(value));
+void Interpreter::defineVar(int id, PTValue value) {
+  env->set(id, std::move(value));
 }
 
-void Interpreter::assignVar(const std::string& name, const PTValue& value) {
+void Interpreter::assignVar(int id, const PTValue& value) {
   auto e = env;
   while (e) {
     for (size_t i = 0; i < e->values.size(); i++) {
-      if (e->values[i].first == name) {
-        for (auto& c : e->consts) { if (c == name) throw PTRuntimeError("Cannot reassign constant '" + name + "'"); }
+      if (e->values[i].first == id) {
+        for (auto& c : e->consts) { if (c == id) throw PTRuntimeError("Cannot reassign constant '" + interner.name(id) + "'"); }
         e->values[i].second = value;
         return;
       }
     }
     e = e->enclosing;
   }
-  throw PTRuntimeError("Undefined variable '" + name + "'");
+  throw PTRuntimeError("Undefined variable '" + interner.name(id) + "'");
 }
 
-const PTValue& Interpreter::getVar(const std::string& name) {
+const PTValue& Interpreter::getVar(int id) {
   auto e = env;
   while (e) {
-    PTValue* f = e->find(name);
+    PTValue* f = e->find(id);
     if (f) return *f;
     e = e->enclosing;
   }
-  throw PTRuntimeError("Undefined variable '" + name + "'");
+  throw PTRuntimeError("Undefined variable '" + interner.name(id) + "'");
 }
 
-const PTValue* Interpreter::findVar(const std::string& name) {
+const PTValue* Interpreter::findVar(int id) {
   auto e = env;
   while (e) {
-    PTValue* f = e->find(name);
+    PTValue* f = e->find(id);
     if (f) return f;
     e = e->enclosing;
   }
   return nullptr;
 }
 
-bool Interpreter::varExists(const std::string& name) {
+bool Interpreter::varExists(int id) {
   auto e = env;
   while (e) {
-    if (e->find(name)) return true;
+    if (e->find(id)) return true;
     e = e->enclosing;
   }
   return false;
@@ -155,13 +155,14 @@ void Interpreter::execute(Stmt& stmt) {
   }
   case StmtType::Var: {
     auto& v = static_cast<VarStmt&>(stmt);
-    defineVar(v.name, v.initializer ? evaluate(v.initializer.get()) : PTValue());
+    defineVar(internCached(v.name, v.id), v.initializer ? evaluate(v.initializer.get()) : PTValue());
     break;
   }
   case StmtType::Const: {
     auto& c = static_cast<ConstStmt&>(stmt);
-    defineVar(c.name, c.initializer ? evaluate(c.initializer.get()) : PTValue());
-    env->addConst(c.name);
+    int id = internCached(c.name, c.id);
+    defineVar(id, c.initializer ? evaluate(c.initializer.get()) : PTValue());
+    env->addConst(id);
     break;
   }
   case StmtType::Block: {
@@ -209,9 +210,12 @@ void Interpreter::execute(Stmt& stmt) {
     auto func = std::make_shared<PTFunction>();
     func->name = f.name;
     func->params = f.params;
+    func->paramIds.resize(f.params.size());
+    for (size_t i = 0; i < f.params.size(); i++)
+      func->paramIds[i] = interner.intern(f.params[i]);
     func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(f.body));
     func->closure = env;
-    defineVar(f.name, PTValue(func));
+    defineVar(internCached(f.name, f.id), PTValue(func));
     break;
   }
   case StmtType::Return: {
@@ -284,6 +288,7 @@ void Interpreter::execute(Stmt& stmt) {
   }
   case StmtType::ForEach: {
     auto& fe = static_cast<ForEachStmt&>(stmt);
+    int feId = internCached(fe.variable, fe.id);
     auto iterable = evaluate(fe.iterable.get());
     if (iterable.isFunction()) throw PTRuntimeError("for-each requires an array or string");
     auto forEachEnv = acquireEnv(env);
@@ -292,7 +297,7 @@ void Interpreter::execute(Stmt& stmt) {
     if (iterable.isArray()) {
       for (auto& elem : *iterable.array) {
         if (returning) break;
-        env->set(fe.variable, elem);
+        env->set(feId, elem);
         execute(*fe.body);
         if (breaking) { breaking = false; break; }
         if (continuing) { continuing = false; }
@@ -300,7 +305,7 @@ void Interpreter::execute(Stmt& stmt) {
     } else {
       for (char c : iterable.value) {
         if (returning) break;
-        env->set(fe.variable, PTValue(std::string(1, c)));
+        env->set(feId, PTValue(std::string(1, c)));
         execute(*fe.body);
         if (breaking) { breaking = false; break; }
         if (continuing) { continuing = false; }
@@ -317,7 +322,10 @@ void Interpreter::execute(Stmt& stmt) {
     } catch (const PTRuntimeError& err) {
       if (!ts.catchBody.empty()) {
         auto catchEnv = acquireEnv(env);
-        if (!ts.catchVar.empty()) catchEnv->set(ts.catchVar, PTValue(err.what()));
+        if (!ts.catchVar.empty()) {
+          int catchId = internCached(ts.catchVar, ts.catchId);
+          catchEnv->set(catchId, PTValue(err.what()));
+        }
         executeBlock(ts.catchBody, catchEnv);
       }
     }
@@ -345,8 +353,9 @@ void Interpreter::execute(Stmt& stmt) {
       for (auto& s : stmts) { execute(*s); if (returning) break; }
       env = prevEnv;
       auto modMap = std::make_shared<std::unordered_map<std::string, PTValue>>();
-      for (auto& [k, v] : moduleEnv->values) (*modMap)[k] = v;
-      defineVar(imp.alias, PTValue(modMap));
+      for (auto& [k, v] : moduleEnv->values) (*modMap)[interner.name(k)] = v;
+      int aliasId = interner.intern(imp.alias);
+      defineVar(aliasId, PTValue(modMap));
     } else {
       for (auto& s : stmts) { execute(*s); if (returning) break; }
     }
@@ -358,7 +367,8 @@ void Interpreter::execute(Stmt& stmt) {
     klass->name = cs.name;
     klass->parentName = cs.parent;
     if (!cs.parent.empty()) {
-      const PTValue& parentVal = getVar(cs.parent);
+      int parentId = interner.intern(cs.parent);
+      const PTValue& parentVal = getVar(parentId);
       if (!parentVal.isClass()) throw PTRuntimeError("'" + cs.parent + "' is not a class");
       klass->parent = parentVal.klass;
     }
@@ -366,6 +376,9 @@ void Interpreter::execute(Stmt& stmt) {
       auto func = std::make_shared<PTFunction>();
       func->name = sm->name;
       func->params = sm->params;
+      func->paramIds.resize(sm->params.size());
+      for (size_t i = 0; i < sm->params.size(); i++)
+        func->paramIds[i] = interner.intern(sm->params[i]);
       func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(sm->body));
       func->closure = env;
       func->isStatic = true;
@@ -378,6 +391,9 @@ void Interpreter::execute(Stmt& stmt) {
       auto func = std::make_shared<PTFunction>();
       func->name = m->name;
       func->params = m->params;
+      func->paramIds.resize(m->params.size());
+      for (size_t i = 0; i < m->params.size(); i++)
+        func->paramIds[i] = interner.intern(m->params[i]);
       func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(m->body));
       func->closure = env;
       if (m->name == "init") func->isInit = true;
@@ -385,8 +401,8 @@ void Interpreter::execute(Stmt& stmt) {
     }
     klass->fields = std::move(cs.fields);
     env = prev;
-    for (auto& [k, v] : klass->staticMethods) defineVar(k, v);
-    defineVar(cs.name, PTValue(klass));
+    for (auto& [k, v] : klass->staticMethods) defineVar(interner.intern(k), v);
+    defineVar(interner.intern(cs.name), PTValue(klass));
     break;
   }
   case StmtType::Enum: {
@@ -394,7 +410,7 @@ void Interpreter::execute(Stmt& stmt) {
     auto m = std::make_shared<std::unordered_map<std::string, PTValue>>();
     for (size_t i = 0; i < es.values.size(); i++)
       (*m)[es.values[i]] = PTValue(static_cast<double>(i));
-    defineVar(es.name, PTValue(m));
+    defineVar(interner.intern(es.name), PTValue(m));
     break;
   }
   case StmtType::Export: {
@@ -425,15 +441,23 @@ PTValue Interpreter::evaluate(Expr* expr) {
     if (l->isNil) return PT_NIL;
     return PTValue(l->value);
   }
-  case ExprType::Variable:
-    return PTValue(getVar(static_cast<Variable*>(expr)->name));
+  case ExprType::Variable: {
+    auto* v = static_cast<Variable*>(expr);
+    int id = internCached(v->name, v->id);
+    return PTValue(getVar(id));
+  }
   case ExprType::Grouping:
     return evaluate(static_cast<Grouping*>(expr)->expression.get());
-  case ExprType::ThisExpr:
-    return PTValue(getVar("this"));
+  case ExprType::ThisExpr: {
+    static int thisId = -1;
+    if (thisId < 0) thisId = interner.intern("this");
+    return PTValue(getVar(thisId));
+  }
   case ExprType::SuperExpr: {
     auto* se = static_cast<SuperExpr*>(expr);
-    const PTValue& thisVal = getVar("this");
+    static int thisId = -1;
+    if (thisId < 0) thisId = interner.intern("this");
+    const PTValue& thisVal = getVar(thisId);
     if (!thisVal.isInstance()) throw PTRuntimeError("'super' can only be used in a method");
     auto instance = thisVal.instance;
     auto parent = instance->klass->parent;
@@ -442,7 +466,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
     if (methodIt == parent->methods.end()) throw PTRuntimeError("Undefined parent method '" + se->method + "'");
     auto method = methodIt->second.function;
     auto methodEnv = acquireEnv(method->closure);
-    methodEnv->set("this", thisVal);
+    methodEnv->set(thisId, thisVal);
     auto prev = env;
     env = methodEnv;
     for (auto& s : *method->body) {
@@ -472,23 +496,26 @@ PTValue Interpreter::evaluate(Expr* expr) {
   }
   case ExprType::PostfixExpr: {
     auto* pe = static_cast<PostfixExpr*>(expr);
-    const PTValue& val = getVar(static_cast<Variable*>(pe->operand.get())->name);
+    auto* operandVar = static_cast<Variable*>(pe->operand.get());
+    int id = internCached(operandVar->name, operandVar->id);
+    const PTValue& val = getVar(id);
     if (pe->op == "++") {
       if (val.isFunction() || val.isArray() || val.isMap()) throw PTRuntimeError("Cannot increment non-number");
       PTValue result(val.numValue + 1);
-      assignVar(static_cast<Variable*>(pe->operand.get())->name, result);
+      assignVar(id, result);
       return result;
     }
     if (pe->op == "--") {
       if (val.isFunction() || val.isArray() || val.isMap()) throw PTRuntimeError("Cannot decrement non-number");
       PTValue result(val.numValue - 1);
-      assignVar(static_cast<Variable*>(pe->operand.get())->name, result);
+      assignVar(id, result);
       return result;
     }
     break;
   }
   case ExprType::ListCompExpr: {
     auto* lc = static_cast<ListCompExpr*>(expr);
+    int lcId = internCached(lc->variable, lc->id);
     auto iterable = evaluate(lc->iterable.get());
     if (!iterable.isArray()) throw PTRuntimeError("List comprehension requires an array");
     auto result = std::make_shared<std::vector<PTValue>>();
@@ -496,7 +523,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
     for (auto& elem : *iterable.array) {
       if (returning) break;
       env = loopEnv;
-      env->set(lc->variable, elem);
+      env->set(lcId, elem);
       if (lc->condition) {
         if (isTruthy(evaluate(lc->condition.get())))
           result->push_back(evaluate(lc->element.get()));
@@ -599,8 +626,9 @@ PTValue Interpreter::evaluate(Expr* expr) {
   }
   case ExprType::Assign: {
     auto* a = static_cast<Assign*>(expr);
+    int id = internCached(a->name, a->id);
     PTValue val = evaluate(a->value.get());
-    assignVar(a->name, val);
+    assignVar(id, val);
     return val;
   }
   case ExprType::ArrayExpr: {
@@ -631,10 +659,12 @@ PTValue Interpreter::evaluate(Expr* expr) {
       if (mit != inst->klass->methods.end()) {
         auto method = mit->second.function;
         auto mf = std::make_shared<PTFunction>();
-        mf->name = method->name; mf->params = method->params;
+        mf->name = method->name; mf->params = method->params; mf->paramIds = method->paramIds;
         mf->body = method->body; mf->closure = method->closure;
+        static int thisId = -1;
+        if (thisId < 0) thisId = interner.intern("this");
         auto me = std::make_shared<Environment>(mf->closure);
-        me->set("this", obj);
+        me->set(thisId, obj);
         mf->closure = me;
         return PTValue(mf);
       }
@@ -643,10 +673,12 @@ PTValue Interpreter::evaluate(Expr* expr) {
         if (pit != inst->klass->parent->methods.end()) {
           auto method = pit->second.function;
           auto mf = std::make_shared<PTFunction>();
-          mf->name = method->name; mf->params = method->params;
+          mf->name = method->name; mf->params = method->params; mf->paramIds = method->paramIds;
           mf->body = method->body; mf->closure = method->closure;
+          static int thisId = -1;
+          if (thisId < 0) thisId = interner.intern("this");
           auto me = std::make_shared<Environment>(mf->closure);
-          me->set("this", obj);
+          me->set(thisId, obj);
           mf->closure = me;
           return PTValue(mf);
         }
@@ -724,7 +756,8 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto* c = static_cast<Call*>(expr);
     if (c->callee->type == ExprType::Variable) {
       auto* var = static_cast<Variable*>(c->callee.get());
-      const PTValue* direct = findVar(var->name);
+      int varId = internCached(var->name, var->id);
+      const PTValue* direct = findVar(varId);
       if (!direct) {
         PTValue result = callBuiltin(var->name, c->arguments);
         if (!result.isFunction()) return result;
@@ -746,14 +779,16 @@ PTValue Interpreter::evaluate(Expr* expr) {
           if (it != k->methods.end()) { initFunc = it->second.function.get(); break; }
         }
         if (initFunc) {
+          static int thisId = -1;
+          if (thisId < 0) thisId = interner.intern("this");
           auto callEnv = acquireEnv(initFunc->closure);
-          callEnv->set("this", instanceVal);
+          callEnv->set(thisId, instanceVal);
           auto prev = env;
           env = callEnv;
           for (size_t i = 0; i < initFunc->params.size(); i++) {
             PTValue argVal;
             if (i < c->arguments.size()) argVal = evaluate(c->arguments[i].get());
-            callEnv->set(initFunc->params[i], std::move(argVal));
+            callEnv->set(initFunc->paramIds[i], std::move(argVal));
           }
           for (auto& s : *initFunc->body) {
             execute(*s);
@@ -772,7 +807,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
         throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
       auto callEnv = acquireEnv(fn->closure);
       for (size_t i = 0; i < fn->params.size(); i++)
-        callEnv->setNew(fn->params[i], evaluate(c->arguments[i].get()));
+        callEnv->setNew(fn->paramIds[i], evaluate(c->arguments[i].get()));
       auto prev = env;
       env = callEnv;
       for (auto& stmt : *fn->body) {
@@ -801,14 +836,16 @@ PTValue Interpreter::evaluate(Expr* expr) {
         if (it != k->methods.end()) { initFunc = it->second.function.get(); break; }
       }
       if (initFunc) {
+        static int thisId = -1;
+        if (thisId < 0) thisId = interner.intern("this");
         auto callEnv = acquireEnv(initFunc->closure);
-        callEnv->setNew("this", instanceVal);
+        callEnv->setNew(thisId, instanceVal);
         auto prev = env;
         env = callEnv;
         for (size_t i = 0; i < initFunc->params.size(); i++) {
           PTValue argVal;
           if (i < c->arguments.size()) argVal = evaluate(c->arguments[i].get());
-          callEnv->setNew(initFunc->params[i], std::move(argVal));
+          callEnv->setNew(initFunc->paramIds[i], std::move(argVal));
         }
         for (auto& s : *initFunc->body) {
           execute(*s);
@@ -827,7 +864,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
       throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
     auto callEnv = acquireEnv(fn->closure);
     for (size_t i = 0; i < fn->params.size(); i++)
-      callEnv->setNew(fn->params[i], evaluate(c->arguments[i].get()));
+      callEnv->setNew(fn->paramIds[i], evaluate(c->arguments[i].get()));
     auto prev = env;
     env = callEnv;
     for (auto& stmt : *fn->body) {
@@ -848,6 +885,9 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto* le = static_cast<LambdaExpr*>(expr);
     auto func = std::make_shared<PTFunction>();
     func->params = le->params;
+    func->paramIds.resize(le->params.size());
+    for (size_t i = 0; i < le->params.size(); i++)
+      func->paramIds[i] = interner.intern(le->params[i]);
     func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(le->body));
     func->closure = env;
     return PTValue(func);
@@ -902,7 +942,7 @@ PTValue Interpreter::evaluateFunction(const PTValue& fnVal, const std::vector<PT
     throw PTRuntimeError("Expected " + std::to_string(fn->params.size()) + " arguments but got " + std::to_string(args.size()));
   auto funcEnv = acquireEnv(fn->closure);
   for (size_t i = 0; i < fn->params.size(); i++)
-    funcEnv->setNew(fn->params[i], args[i]);
+    funcEnv->setNew(fn->paramIds[i], args[i]);
   auto prev = env;
   env = funcEnv;
   for (auto& stmt : *fn->body) {
@@ -1373,8 +1413,10 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
       (*reqMap)["headers"] = PTValue(hdrMap);
       std::cout << req.method << " " << req.path << std::endl;
       auto savedEnv = env;
+      static int reqId = -1;
+      if (reqId < 0) reqId = interner.intern("req");
       auto handlerEnv = std::make_shared<Environment>(handler.function->closure);
-      handlerEnv->set("req", PTValue(reqMap));
+      handlerEnv->set(reqId, PTValue(reqMap));
       env = handlerEnv;
       PTValue response;
       for (auto& s : *handler.function->body) {

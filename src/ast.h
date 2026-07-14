@@ -30,6 +30,7 @@ struct Literal : Expr {
 
 struct Variable : Expr {
   std::string name;
+  mutable int id = -1;
   Variable(std::string n) : Expr(ExprType::Variable), name(n) {}
 };
 
@@ -53,6 +54,7 @@ struct Grouping : Expr {
 
 struct Assign : Expr {
   std::string name;
+  mutable int id = -1;
   std::unique_ptr<Expr> value;
   Assign(std::string n, std::unique_ptr<Expr> v) : Expr(ExprType::Assign), name(n), value(std::move(v)) {}
 };
@@ -149,12 +151,14 @@ struct ExprStmt : Stmt {
 
 struct VarStmt : Stmt {
   std::string name;
+  mutable int id = -1;
   std::unique_ptr<Expr> initializer;
   VarStmt(std::string n, std::unique_ptr<Expr> i) : Stmt(StmtType::Var), name(n), initializer(std::move(i)) {}
 };
 
 struct ConstStmt : Stmt {
   std::string name;
+  mutable int id = -1;
   std::unique_ptr<Expr> initializer;
   ConstStmt(std::string n, std::unique_ptr<Expr> i) : Stmt(StmtType::Const), name(n), initializer(std::move(i)) {}
 };
@@ -180,7 +184,9 @@ struct WhileStmt : Stmt {
 
 struct FunctionStmt : Stmt {
   std::string name;
+  mutable int id = -1;
   std::vector<std::string> params;
+  mutable std::vector<int> paramIds;
   std::vector<std::unique_ptr<Stmt>> body;
   FunctionStmt(std::string n, std::vector<std::string> p, std::vector<std::unique_ptr<Stmt>> b)
     : Stmt(StmtType::Function), name(n), params(p), body(std::move(b)) {}
@@ -205,6 +211,7 @@ struct ForStmt : Stmt {
 
 struct ForEachStmt : Stmt {
   std::string variable;
+  mutable int id = -1;
   std::unique_ptr<Expr> iterable;
   std::unique_ptr<Stmt> body;
   ForEachStmt(std::string v, std::unique_ptr<Expr> it, std::unique_ptr<Stmt> b)
@@ -213,6 +220,7 @@ struct ForEachStmt : Stmt {
 
 struct LambdaExpr : Expr {
   std::vector<std::string> params;
+  mutable std::vector<int> paramIds;
   std::vector<std::unique_ptr<Stmt>> body;
   LambdaExpr(std::vector<std::string> p, std::vector<std::unique_ptr<Stmt>> b)
     : Expr(ExprType::LambdaExpr), params(std::move(p)), body(std::move(b)) {}
@@ -227,6 +235,7 @@ struct ImportStmt : Stmt {
 struct TryStmt : Stmt {
   std::vector<std::unique_ptr<Stmt>> tryBody;
   std::string catchVar;
+  mutable int catchId = -1;
   std::vector<std::unique_ptr<Stmt>> catchBody;
   std::vector<std::unique_ptr<Stmt>> finallyBody;
   TryStmt(std::vector<std::unique_ptr<Stmt>> tb, std::string cv,
@@ -248,6 +257,7 @@ struct PostfixExpr : Expr {
 struct ListCompExpr : Expr {
   std::unique_ptr<Expr> element;
   std::string variable;
+  mutable int id = -1;
   std::unique_ptr<Expr> iterable;
   std::unique_ptr<Expr> condition;
   ListCompExpr(std::unique_ptr<Expr> e, std::string v, std::unique_ptr<Expr> it, std::unique_ptr<Expr> c)

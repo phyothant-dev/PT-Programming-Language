@@ -16,6 +16,19 @@ struct PTFunction;
 struct PTClass;
 struct PTInstance;
 
+class StringInterner {
+  std::unordered_map<std::string, int> nameToId;
+  std::vector<std::string> idToName;
+public:
+  int intern(const std::string& name) {
+    auto [it, ok] = nameToId.emplace(name, (int)idToName.size());
+    if (ok) idToName.push_back(name);
+    return it->second;
+  }
+  const std::string& name(int id) const { return idToName[id]; }
+  int count() const { return (int)idToName.size(); }
+};
+
 struct PTValue {
   enum Type { TNil, TBool, TNumber, TString, TFunction, TArray, TMap, TClass, TInstance, TDatabase };
   Type type;
@@ -110,6 +123,7 @@ struct PTValue {
 struct PTFunction {
   std::string name;
   std::vector<std::string> params;
+  std::vector<int> paramIds;
   std::shared_ptr<std::vector<std::unique_ptr<Stmt>>> body;
   std::shared_ptr<class Environment> closure;
   bool isStatic = false;
@@ -132,8 +146,8 @@ struct PTInstance {
 
 class Environment {
 public:
-  std::vector<std::pair<std::string, PTValue>> values;
-  std::vector<std::string> consts;
+  std::vector<std::pair<int, PTValue>> values;
+  std::vector<int> consts;
   std::shared_ptr<Environment> enclosing;
   Environment() : enclosing(nullptr) {}
   Environment(std::shared_ptr<Environment> enc) : enclosing(enc) {}
@@ -147,31 +161,31 @@ public:
     enclosing = enc;
   }
 
-  void set(const std::string& name, PTValue val) {
+  void set(int id, PTValue val) {
     for (auto& [k, v] : values) {
-      if (k == name) { v = std::move(val); return; }
+      if (k == id) { v = std::move(val); return; }
     }
-    values.emplace_back(name, std::move(val));
+    values.emplace_back(id, std::move(val));
   }
 
-  void setNew(const std::string& name, PTValue val) {
-    values.emplace_back(name, std::move(val));
+  void setNew(int id, PTValue val) {
+    values.emplace_back(id, std::move(val));
   }
 
-  PTValue* find(const std::string& name) {
+  PTValue* find(int id) {
     for (auto& [k, v] : values) {
-      if (k == name) return &v;
+      if (k == id) return &v;
     }
     return nullptr;
   }
 
-  void addConst(const std::string& name) {
-    for (auto& c : consts) { if (c == name) return; }
-    consts.push_back(name);
+  void addConst(int id) {
+    for (auto& c : consts) { if (c == id) return; }
+    consts.push_back(id);
   }
 
-  bool isConst(const std::string& name) {
-    for (auto& c : consts) { if (c == name) return true; }
+  bool isConst(int id) {
+    for (auto& c : consts) { if (c == id) return true; }
     return false;
   }
 };
@@ -183,6 +197,7 @@ public:
   std::shared_ptr<Environment> globals;
   std::shared_ptr<Environment> env;
   PTValue evaluateFunction(const PTValue& fn, const std::vector<PTValue>& args);
+  StringInterner interner;
 
 private:
   bool returning = false;
@@ -199,11 +214,16 @@ private:
     return std::shared_ptr<Environment>(raw, [this](Environment* e) { envPool.push_back(e); });
   }
 
-  void defineVar(const std::string& name, PTValue value);
-  void assignVar(const std::string& name, const PTValue& value);
-  const PTValue& getVar(const std::string& name);
-  const PTValue* findVar(const std::string& name);
-  bool varExists(const std::string& name);
+  int internCached(const std::string& name, int& cachedId) {
+    if (cachedId < 0) cachedId = interner.intern(name);
+    return cachedId;
+  }
+
+  void defineVar(int id, PTValue value);
+  void assignVar(int id, const PTValue& value);
+  const PTValue& getVar(int id);
+  const PTValue* findVar(int id);
+  bool varExists(int id);
 
   void execute(Stmt& stmt);
   void executeBlock(std::vector<std::unique_ptr<Stmt>>& stmts, std::shared_ptr<Environment> blockEnv);
