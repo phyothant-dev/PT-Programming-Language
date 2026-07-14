@@ -318,45 +318,12 @@ httpListen(3000, (req) => {
         return;
       }
 
-      let lines = [];
-      let vars = {};
-      const codeLines = code.split('\n');
-      for (const line of codeLines) {
-        const trimmed = line.trim();
-        let showMatch = trimmed.match(/^show\("(.*)"\);?$/);
-        if (showMatch) {
-          let str = showMatch[1];
-          str = str.replace(/\$\{(\w+)\}/g, (_, name) => vars[name] !== undefined ? vars[name] : '${' + name + '}');
-          lines.push(str);
-          continue;
-        }
-        let varMatch = trimmed.match(/^let\s+(\w+)\s*=\s*"(.*)"$/);
-        if (varMatch) {
-          vars[varMatch[1]] = varMatch[2];
-          continue;
-        }
-        let numMatch = trimmed.match(/^let\s+(\w+)\s*=\s*(\d+)$/);
-        if (numMatch) {
-          vars[numMatch[1]] = numMatch[2];
-          continue;
-        }
-        let showVarMatch = trimmed.match(/^show\((\w+)\);?$/);
-        if (showVarMatch && vars[showVarMatch[1]] !== undefined) {
-          lines.push(vars[showVarMatch[1]]);
-          continue;
-        }
-      }
-
-      if (lines.length > 0) {
-        output.textContent = lines.join('\n');
-      } else {
-        output.textContent = 'To run PT code for real, install PT:\n\n' +
-          '  git clone https://github.com/phyothant-dev/PT-Programming-Language\n' +
-          '  cd PT-Programming-Language\n' +
-          '  make\n\n' +
-          'Then run your code:\n\n' +
-          '  ./pt your_code.pt';
-      }
+      output.textContent = 'To run custom PT code, install PT:\n\n' +
+        '  git clone https://github.com/phyothant-dev/PT-Programming-Language\n' +
+        '  cd PT-Programming-Language\n' +
+        '  make\n\n' +
+        'Then run your code:\n\n' +
+        '  ./pt your_code.pt';
     }
   </script>
 </body>
