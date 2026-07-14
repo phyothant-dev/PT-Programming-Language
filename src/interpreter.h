@@ -6,6 +6,7 @@
 #include <string>
 #include <stdexcept>
 #include "ast.h"
+#include <sqlite3.h>
 
 struct PTRuntimeError : public std::runtime_error {
   using std::runtime_error::runtime_error;
@@ -27,14 +28,17 @@ struct PTValue {
   bool isClass;
   std::shared_ptr<PTInstance> instance;
   bool isInstance;
+  sqlite3* db;
+  bool isDatabase;
 
-  PTValue() : value("nil"), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false) {}
-  PTValue(std::string v) : value(v), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false) {}
-  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true), isArray(false), isMap(false), isClass(false), isInstance(false) {}
-  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), function(nullptr), isFunction(false), array(a), isArray(true), map(nullptr), isMap(false), isClass(false), isInstance(false) {}
-  PTValue(std::shared_ptr<std::unordered_map<std::string, PTValue>> m) : value("<map>"), function(nullptr), isFunction(false), array(nullptr), isArray(false), map(m), isMap(true), isClass(false), isInstance(false) {}
-  PTValue(std::shared_ptr<PTClass> c) : value("<class>"), isFunction(false), isArray(false), isMap(false), klass(c), isClass(true), isInstance(false) {}
-  PTValue(std::shared_ptr<PTInstance> i) : value("<instance>"), isFunction(false), isArray(false), isMap(false), isClass(false), instance(i), isInstance(true) {}
+  PTValue() : value("nil"), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::string v) : value(v), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), function(nullptr), isFunction(false), array(a), isArray(true), map(nullptr), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<std::unordered_map<std::string, PTValue>> m) : value("<map>"), function(nullptr), isFunction(false), array(nullptr), isArray(false), map(m), isMap(true), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<PTClass> c) : value("<class>"), isFunction(false), isArray(false), isMap(false), klass(c), isClass(true), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<PTInstance> i) : value("<instance>"), isFunction(false), isArray(false), isMap(false), isClass(false), instance(i), isInstance(true), db(nullptr), isDatabase(false) {}
+  PTValue(sqlite3* d) : value("<database>"), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(d), isDatabase(true) {}
 };
 
 struct Environment {

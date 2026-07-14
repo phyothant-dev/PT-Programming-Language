@@ -61,6 +61,7 @@
       <h3>Web</h3>
       <a href="#server">HTTP Server</a>
       <a href="#fileio">File I/O</a>
+      <a href="#database">SQLite</a>
     </div>
 
     <div class="docs-content">
@@ -315,6 +316,34 @@ match (Color.RED) {
       <pre><code>let content = readFile("data.txt");
 writeFile("output.txt", "Hello!");
 let exists = fileExists("data.txt");</code></pre>
+
+      <h2 id="database">SQLite Database</h2>
+      <pre><code>// Open a database (creates file if it doesn't exist)
+let db = sqliteOpen("mydata.db");
+
+// Create a table
+sqliteExec(db, "CREATE TABLE users (id INTEGER, name TEXT, age INTEGER)");
+
+// Insert data
+sqliteExec(db, "INSERT INTO users VALUES (1, 'Alice', 30)");
+sqliteExec(db, "INSERT INTO users VALUES (2, 'Bob', 25)");
+
+// Query data
+let rows = sqliteQuery(db, "SELECT * FROM users");
+show(rows);
+// [{id: 1, name: Alice, age: 30}, {id: 2, name: Bob, age: 25}]
+
+// Filtered query
+let adults = sqliteQuery(db, "SELECT name FROM users WHERE age > 28");
+
+// Update
+sqliteExec(db, "UPDATE users SET age = 31 WHERE name = 'Alice'");
+
+// Delete
+sqliteExec(db, "DELETE FROM users WHERE id = 2");
+
+// Close when done
+sqliteClose(db);</code></pre>
     </div>
   </div>
 

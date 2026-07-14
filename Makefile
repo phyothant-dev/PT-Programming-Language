@@ -1,5 +1,6 @@
 CXX      := g++
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra
+LDFLAGS  := -lsqlite3
 SRC      := src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.cpp src/http.cpp
 TARGET   := pt
 
@@ -8,7 +9,7 @@ TARGET   := pt
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC) $(LDFLAGS)
 
 windows:
 	x86_64-w64-mingw32-g++ -std=c++17 -O2 -static -o pt.exe $(SRC)

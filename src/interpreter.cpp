@@ -1145,6 +1145,64 @@ PTValue Interpreter::callBuiltin(const std::string& name, const std::vector<std:
     std::ifstream f(path.value);
     return PTValue(f.good() ? "true" : "false");
   }
+  if (name == "sqliteOpen") {
+    if (args.size() != 1) throw PTRuntimeError("sqliteOpen() expects 1 argument");
+    auto path = evaluate(args[0].get());
+    sqlite3* db;
+    if (sqlite3_open(path.value.c_str(), &db) != SQLITE_OK) {
+      std::string err = sqlite3_errmsg(db);
+      sqlite3_close(db);
+      throw PTRuntimeError("Cannot open database: " + err);
+    }
+    return PTValue(db);
+  }
+  if (name == "sqliteExec") {
+    if (args.size() != 2) throw PTRuntimeError("sqliteExec(db, sql) expects 2 arguments");
+    auto dbArg = evaluate(args[0].get());
+    auto sql = evaluate(args[1].get());
+    if (!dbArg.isDatabase) throw PTRuntimeError("sqliteExec() expects a database");
+    char* errMsg = nullptr;
+    if (sqlite3_exec(dbArg.db, sql.value.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+      std::string err = errMsg;
+      sqlite3_free(errMsg);
+      throw PTRuntimeError("SQL error: " + err);
+    }
+    return PTValue("true");
+  }
+  if (name == "sqliteQuery") {
+    if (args.size() != 2) throw PTRuntimeError("sqliteQuery(db, sql) expects 2 arguments");
+    auto dbArg = evaluate(args[0].get());
+    auto sql = evaluate(args[1].get());
+    if (!dbArg.isDatabase) throw PTRuntimeError("sqliteQuery() expects a database");
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(dbArg.db, sql.value.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+      throw PTRuntimeError("SQL error: " + std::string(sqlite3_errmsg(dbArg.db)));
+    }
+    auto rows = std::make_shared<std::vector<PTValue>>();
+    int colCount = sqlite3_column_count(stmt);
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+      auto row = std::make_shared<std::unordered_map<std::string, PTValue>>();
+      for (int i = 0; i < colCount; i++) {
+        std::string colName = sqlite3_column_name(stmt, i);
+        const unsigned char* text = sqlite3_column_text(stmt, i);
+        if (text) {
+          (*row)[colName] = PTValue(std::string(reinterpret_cast<const char*>(text)));
+        } else {
+          (*row)[colName] = PTValue("nil");
+        }
+      }
+      rows->push_back(PTValue(row));
+    }
+    sqlite3_finalize(stmt);
+    return PTValue(rows);
+  }
+  if (name == "sqliteClose") {
+    if (args.size() != 1) throw PTRuntimeError("sqliteClose() expects 1 argument");
+    auto dbArg = evaluate(args[0].get());
+    if (!dbArg.isDatabase) throw PTRuntimeError("sqliteClose() expects a database");
+    sqlite3_close(dbArg.db);
+    return PTValue("true");
+  }
   if (name == "httpListen") {
     if (args.size() != 2) throw PTRuntimeError("httpListen(port, handler) expects 2 arguments");
     auto portVal = evaluate(args[0].get());
