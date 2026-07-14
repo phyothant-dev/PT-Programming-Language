@@ -66,23 +66,15 @@
           <button class="run-btn" onclick="runExample()">&#9654; Run</button>
         </div>
         <div class="panel-body">
-          <textarea id="code" spellcheck="false" oninput="currentExample = null">let name = "World";
-show("Hello, " + name + "!");
+          <textarea id="code" spellcheck="false" oninput="currentExample = null">show("Hello, World!");
+show("PT is a unique language");
 
-let nums = [1, 2, 3, 4, 5];
-let doubled = [x * 2 for x in nums];
-show("Doubled: " + toString(doubled));
+let x = 42;
+show("The answer is " + toString(x));
 
-let result = match(42) {
-  0 => "zero"
-  42 => "the answer"
-  _ => "other"
-};
-show("Match: " + result);
-
-repeat 3 {
-  show("PT is awesome!");
-}</textarea>
+show("ha" * 3);
+show(upper("hello"));
+show(len("PT Language"));</textarea>
         </div>
       </div>
 
@@ -299,7 +291,7 @@ httpListen(3000, (req) => {
 });`
     };
 
-    let currentExample = null;
+    let currentExample = 'hello';
 
     const expectedOutputs = {
       hello: `Hello, World!\nPT is a unique language\nThe answer is 42\nhahaha\nHELLO\n11`,
