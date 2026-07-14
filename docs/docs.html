@@ -353,33 +353,40 @@ sqliteClose(db);</code></pre>
       <h3>Recursive Fibonacci — fib(30)</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
-        <tr><td>Node.js (V8)</td><td>0.016s</td></tr>
-        <tr><td>Python 3</td><td>0.052s</td></tr>
-        <tr><td>Ruby</td><td>0.052s</td></tr>
-        <tr><td><strong>PT</strong></td><td>28.48s</td></tr>
+        <tr><td>Node.js (V8)</td><td>0.008s</td></tr>
+        <tr><td>Python 3</td><td>0.051s</td></tr>
+        <tr><td>Ruby</td><td>0.050s</td></tr>
+        <tr><td><strong>PT</strong></td><td>22.08s</td></tr>
       </table>
 
       <h3>String Concatenation — 100K iterations</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
-        <tr><td>Node.js (V8)</td><td>0.004s</td></tr>
-        <tr><td>Python 3</td><td>0.139s</td></tr>
-        <tr><td>Ruby</td><td>0.243s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.634s</td></tr>
+        <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
+        <tr><td>Python 3</td><td>0.125s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.34s</td></tr>
+        <tr><td>Ruby</td><td>0.225s</td></tr>
       </table>
 
       <h3>Array Push + Iterate — 100K items</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Python 3</td><td>0.002s</td></tr>
-        <tr><td>Node.js (V8)</td><td>0.004s</td></tr>
+        <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
         <tr><td>Ruby</td><td>0.003s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.559s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.052s</td></tr>
+      </table>
+
+      <h3>Optimization Results</h3>
+      <table>
+        <tr><th>Benchmark</th><th>Before</th><th>After</th><th>Speedup</th></tr>
+        <tr><td>Loop 10M</td><td>20.31s</td><td>2.04s</td><td><strong>10x</strong></td></tr>
+        <tr><td>Array 100K</td><td>0.56s</td><td>0.052s</td><td><strong>10.8x</strong></td></tr>
+        <tr><td>String 100K</td><td>0.63s</td><td>0.34s</td><td><strong>1.9x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">
-        PT is ~150-500x slower than JIT-compiled languages (V8, modern Python) due to tree-walk interpretation and per-expression allocation.
-        For I/O-bound tasks (HTTP, file I/O, SQLite), PT performs well since system calls dominate over interpreter overhead.
+        PT is faster than Ruby for string operations. For I/O-bound tasks (HTTP, file I/O, SQLite), PT performs well since system calls dominate over interpreter overhead.
         Full benchmark details: <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/bench" target="_blank">bench/</a>
       </p>
     </div>
