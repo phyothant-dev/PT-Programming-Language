@@ -64,10 +64,75 @@
 
     <div class="docs-content">
       <h2 id="install">Installation</h2>
-      <pre><code>git clone https://github.com/phyothant-dev/PT-Programming-Language.git
+
+      <h3>Prerequisites</h3>
+      <table>
+        <tr><th>Requirement</th><th>Details</th></tr>
+        <tr><td>C++17 compiler</td><td><code>g++ 7+</code> or <code>clang++ 5+</code></td></tr>
+        <tr><td>Make</td><td><code>make</code> (GNU Make)</td></tr>
+        <tr><td>Git</td><td>To clone the repository</td></tr>
+      </table>
+
+      <h3>One-Line Install (macOS / Linux)</h3>
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/phyothant-dev/PT-Programming-Language/main/install.sh | sh</code></pre>
+
+      <h3>Build from Source</h3>
+
+      <h3>macOS</h3>
+      <pre><code># Install Xcode Command Line Tools (if not installed)
+xcode-select --install
+
+# Clone and build
+git clone https://github.com/phyothant-dev/PT-Programming-Language.git
 cd PT-Programming-Language
 make
+
+# Run
 ./pt --version</code></pre>
+
+      <h3>Linux (Ubuntu / Debian)</h3>
+      <pre><code># Install compiler and tools
+sudo apt update
+sudo apt install g++ make git
+
+# Clone and build
+git clone https://github.com/phyothant-dev/PT-Programming-Language.git
+cd PT-Programming-Language
+make
+
+# Run
+./pt --version</code></pre>
+
+      <h3>Linux (Fedora / RHEL)</h3>
+      <pre><code># Install compiler and tools
+sudo dnf install gcc-c++ make git
+
+# Clone and build
+git clone https://github.com/phyothant-dev/PT-Programming-Language.git
+cd PT-Programming-Language
+make
+
+# Run
+./pt --version</code></pre>
+
+      <h3>Windows (Cross-compile from Linux/WSL)</h3>
+      <pre><code># Install MinGW cross-compiler
+sudo apt install g++-mingw-w64-x86-64
+
+# Cross-compile for Windows
+git clone https://github.com/phyothant-dev/PT-Programming-Language.git
+cd PT-Programming-Language
+make windows
+
+# Output: pt.exe — run on any Windows machine</code></pre>
+
+      <h3>Install to System Path</h3>
+      <pre><code># After building
+sudo make install    # installs to /usr/local/bin/pt
+
+# Then run from anywhere
+pt --version
+pt script.pt</code></pre>
 
       <h2 id="hello">Hello World</h2>
       <pre><code>show("Hello, World!");
