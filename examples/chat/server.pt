@@ -1,5 +1,4 @@
 let messages = [];
-let users = [];
 
 httpListen(3000, (req) => {
   show(req.method + " " + req.path);
@@ -17,24 +16,12 @@ httpListen(3000, (req) => {
   }
 
   if (req.path is "/api/messages" and req.method is "POST") {
-    let msg = {
-      user: req.body.user,
-      text: req.body.text,
-      time: "now"
-    };
+    let msg = {user: req.body, text: req.body};
     push(messages, msg);
     return {
       status: 201,
       headers: {"Content-Type": "application/json"},
       body: toString(msg)
-    };
-  }
-
-  if (req.path is "/api/users") {
-    return {
-      status: 200,
-      headers: {"Content-Type": "application/json"},
-      body: toString(users)
     };
   }
 

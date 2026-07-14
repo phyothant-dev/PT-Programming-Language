@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; display: flex; justify-content: center; padding: 4rem 2rem; }
+    .app { width: 100%; max-width: 500px; }
+    h1 { font-size: 2rem; margin-bottom: 1.5rem; text-align: center; }
+    .add { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .add input { flex: 1; padding: 0.7rem 1rem; background: #12121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #e0e0e0; font-size: 1rem; }
+    .add button { padding: 0.7rem 1.5rem; background: linear-gradient(135deg, #f857a6, #ff5858); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    #list { list-style: none; }
+    #list li { display: flex; align-items: center; gap: 0.8rem; padding: 1rem; background: #12121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 0.5rem; }
+    #list li.done span { text-decoration: line-through; color: #888; }
+    #list li span { flex: 1; }
+    #list li button { background: none; border: none; color: #ff5858; cursor: pointer; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Todo List</h1>
+    <div class="add">
+      <input id="input" placeholder="What needs to be done?">
+      <button onclick="add()">Add</button>
+    </div>
+    <ul id="list"></ul>
+  </div>
+  <script>
+    let todos = [];
+    function render() {
+      const list = document.getElementById('list');
+      list.innerHTML = todos.map((t, i) =>
+        `<li class="${t.done ? 'done' : ''}">
+          <input type="checkbox" ${t.done ? 'checked' : ''} onclick="toggle(${i})">
+          <span>${t.text}</span>
+          <button onclick="remove(${i})">&times;</button>
+        </li>`
+      ).join('');
+    }
+    function add() {
+      const input = document.getElementById('input');
+      if (!input.value) return;
+      fetch('/api/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: input.value})})
+        .then(r => r.json()).then(t => { todos.push(t); render(); input.value = ''; });
+    }
+    function toggle(i) { todos[i].done = !todos[i].done; render(); }
+    function remove(i) { todos.splice(i, 1); render(); }
+    fetch('/api/todos').then(r => r.json()).then(data => { todos = data; render(); });
+  </script>
+</body>
+</html>

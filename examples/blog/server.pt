@@ -1,26 +1,12 @@
 let header = readFile("templates/header.html");
 let footer = readFile("templates/footer.html");
 
-let posts = [
-  {title: "Getting Started with PT", slug: "getting-started", date: "2024-01-15"},
-  {title: "Building Web Servers", slug: "web-servers", date: "2024-01-20"},
-  {title: "PT vs JavaScript", slug: "pt-vs-js", date: "2024-02-01"}
-];
-
-fn renderPost(post) {
-  return `
-    <article class="post">
-      <h2><a href="/post/${post.slug}">${post.title}</a></h2>
-      <time>${post.date}</time>
-    </article>`;
-}
+let postTitles = ["Getting Started with PT", "Building Web Servers", "PT vs JavaScript"];
+let postSlugs = ["getting-started", "web-servers", "pt-vs-js"];
+let postDates = ["2024-01-15", "2024-01-20", "2024-02-01"];
 
 fn renderPage(title, content) {
-  return header + `
-    <main>
-      <h1>${title}</h1>
-      ${content}
-    </main>` + footer;
+  return header + "<main><h1>" + title + "</h1>" + content + "</main>" + footer;
 }
 
 httpListen(3000, (req) => {
@@ -28,20 +14,22 @@ httpListen(3000, (req) => {
 
   if (req.path is "/") {
     let list = "";
-    for (let post of posts) {
-      list = list + renderPost(post);
+    let i = 0;
+    while (i < len(postTitles)) {
+      list = list + "<article class='post'><h2><a href='/post/" + postSlugs[i] + "'>" + postTitles[i] + "</a></h2><time>" + postDates[i] + "</time></article>";
+      i++;
     }
     return renderPage("My Blog", list);
   }
 
   if (req.path is "/rss") {
-    let rss = `<?xml version="1.0"?>
-    <rss version="2.0"><channel>
-      <title>My Blog</title>`;
-    for (let post of posts) {
-      rss = rss + `<item><title>${post.title}</title></item>`;
+    let rss = "<?xml version=\"1.0\"?><rss version=\"2.0\"><channel><title>My Blog</title>";
+    let i = 0;
+    while (i < len(postTitles)) {
+      rss = rss + "<item><title>" + postTitles[i] + "</title></item>";
+      i++;
     }
-    rss = rss + `</channel></rss>`;
+    rss = rss + "</channel></rss>";
     return {status: 200, headers: {"Content-Type": "application/xml"}, body: rss};
   }
 
