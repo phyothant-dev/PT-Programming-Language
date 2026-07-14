@@ -115,6 +115,21 @@ make
 # Run
 ./pt --version</code></pre>
 
+      <h3>Windows</h3>
+      <pre><code># Install MSYS2 from https://www.msys2.org
+# Open MSYS2 UCRT64 terminal, then:
+
+# Install compiler and tools
+pacman -S mingw-w64-ucrt-x86_64-gcc make git
+
+# Clone and build
+git clone https://github.com/phyothant-dev/PT-Programming-Language.git
+cd PT-Programming-Language
+make
+
+# Run
+./pt --version</code></pre>
+
       <h3>Install to System Path</h3>
       <pre><code># After building
 sudo make install    # installs to /usr/local/bin/pt
