@@ -105,145 +105,137 @@
   <section class="features" style="padding-top: 2rem;">
     <h2>Build With PT</h2>
     <p style="color: var(--text-dim); margin-bottom: 3rem;">Start building in seconds. Pick a template and start coding.</p>
-    <div class="feature-grid" id="templates">
-      <div class="feature-card" onclick="toggleTemplate(this)">
-        <div class="feature-icon">&#x1F4DD;</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="code-window" style="margin-bottom: 1rem; font-size: 0.7rem;">
+          <div class="code-bar" style="padding: 0.4rem 0.6rem;">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title" style="font-size: 0.7rem;">Blog</span>
+          </div>
+          <div style="padding: 1rem; text-align: left; background: var(--bg); min-height: 120px;">
+            <div style="font-size: 0.8rem; color: var(--gold); font-weight: 700; margin-bottom: 0.5rem;">My Blog</div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.4rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">Getting Started with PT<br><span style="font-size: 0.6rem;">2024-01-15</span></div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.4rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">Building Web Servers<br><span style="font-size: 0.6rem;">2024-01-20</span></div>
+            <div style="font-size: 0.65rem; color: var(--text-dim);">PT vs JavaScript<br><span style="font-size: 0.6rem;">2024-02-01</span></div>
+          </div>
+        </div>
         <h3>Blog</h3>
-        <p>A clean blog with markdown posts and RSS feed.</p>
-        <div class="template-preview" style="display:none; margin-top:1rem;">
-          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let posts = [
-  {title: "Getting Started", slug: "start"},
-  {title: "Web Servers", slug: "web"}
-];
-
-httpListen(3000, (req) => {
-  if (req.path is "/") {
-    return renderPage("Blog", posts);
-  }
-});</code></pre>
-          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET / &rarr; 200 OK</p>
-        </div>
+        <p>Markdown posts, tags, RSS feed</p>
       </div>
 
-      <div class="feature-card" onclick="toggleTemplate(this)">
-        <div class="feature-icon">&#x1F3A8;</div>
+      <div class="feature-card">
+        <div class="code-window" style="margin-bottom: 1rem; font-size: 0.7rem;">
+          <div class="code-bar" style="padding: 0.4rem 0.6rem;">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title" style="font-size: 0.7rem;">Portfolio</span>
+          </div>
+          <div style="padding: 1rem; text-align: center; background: var(--bg); min-height: 120px;">
+            <div style="font-size: 0.85rem; color: var(--text); font-weight: 700;">Phyo Thant</div>
+            <div style="font-size: 0.6rem; color: var(--accent); margin-bottom: 0.6rem;">Building PT Language</div>
+            <div style="display: flex; gap: 0.3rem; justify-content: center;">
+              <div style="width: 40px; height: 30px; background: var(--bg3); border-radius: 4px;"></div>
+              <div style="width: 40px; height: 30px; background: var(--bg3); border-radius: 4px;"></div>
+              <div style="width: 40px; height: 30px; background: var(--bg3); border-radius: 4px;"></div>
+            </div>
+          </div>
+        </div>
         <h3>Portfolio</h3>
-        <p>Personal portfolio with project gallery and contact form.</p>
-        <div class="template-preview" style="display:none; margin-top:1rem;">
-          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>class Project {
-  fn init(name, desc) {
-    this.name = name;
-    this.desc = desc;
-  }
-  fn render() {
-    return "&lt;h3&gt;" + this.name + "&lt;/h3&gt;";
-  }
-}
-
-httpListen(3000, (req) => {
-  return renderPortfolio(projects);
-});</code></pre>
-          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET / &rarr; 200 OK</p>
-        </div>
+        <p>Project gallery, contact form</p>
       </div>
 
-      <div class="feature-card" onclick="toggleTemplate(this)">
-        <div class="feature-icon">&#x2705;</div>
+      <div class="feature-card">
+        <div class="code-window" style="margin-bottom: 1rem; font-size: 0.7rem;">
+          <div class="code-bar" style="padding: 0.4rem 0.6rem;">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title" style="font-size: 0.7rem;">Todo App</span>
+          </div>
+          <div style="padding: 1rem; text-align: left; background: var(--bg); min-height: 120px;">
+            <div style="font-size: 0.8rem; color: var(--gold); font-weight: 700; margin-bottom: 0.5rem;">Todo List</div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+              <span style="color: #28c840;">&#x2713;</span> Buy groceries
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+              <span style="color: var(--text-dim);">&#x25CB;</span> Write docs
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.3rem;">
+              <span style="color: var(--text-dim);">&#x25CB;</span> Deploy app
+            </div>
+          </div>
+        </div>
         <h3>Todo App</h3>
-        <p>Full-stack todo app with JSON API and categories.</p>
-        <div class="template-preview" style="display:none; margin-top:1rem;">
-          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let todos = [];
-
-httpListen(3000, (req) => {
-  if (req.path is "/api/todos") {
-    return {status: 200, body: toString(todos)};
-  }
-  if (req.method is "POST") {
-    push(todos, {text: req.body, done: false});
-  }
-});</code></pre>
-          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">POST /api/todos &rarr; 201 Created</p>
-        </div>
+        <p>JSON API, categories, priorities</p>
       </div>
 
-      <div class="feature-card" onclick="toggleTemplate(this)">
-        <div class="feature-icon">&#x1F4E1;</div>
+      <div class="feature-card">
+        <div class="code-window" style="margin-bottom: 1rem; font-size: 0.7rem;">
+          <div class="code-bar" style="padding: 0.4rem 0.6rem;">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title" style="font-size: 0.7rem;">REST API</span>
+          </div>
+          <div style="padding: 1rem; text-align: left; background: var(--bg); min-height: 120px; font-family: 'Fira Code', monospace;">
+            <div style="font-size: 0.6rem; color: var(--gold); margin-bottom: 0.3rem;">GET /api/users</div>
+            <div style="font-size: 0.55rem; color: var(--blue); margin-bottom: 0.5rem;">200 OK &middot; 12ms</div>
+            <div style="font-size: 0.55rem; color: var(--text-dim);">{</div>
+            <div style="font-size: 0.55rem; color: var(--text-dim); padding-left: 0.8rem;">"id": 1, "name": "Alice"</div>
+            <div style="font-size: 0.55rem; color: var(--text-dim); padding-left: 0.8rem;">"id": 2, "name": "Bob"</div>
+            <div style="font-size: 0.55rem; color: var(--text-dim);">}</div>
+          </div>
+        </div>
         <h3>REST API</h3>
-        <p>JSON API server with routes, middleware, and error handling.</p>
-        <div class="template-preview" style="display:none; margin-top:1rem;">
-          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let users = [
-  {id: 1, name: "Alice"},
-  {id: 2, name: "Bob"}
-];
-
-httpListen(3001, (req) => {
-  if (req.path is "/api/users") {
-    return {status: 200, body: toString(users)};
-  }
-  return {status: 404, body: "Not Found"};
-});</code></pre>
-          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET /api/users &rarr; 200 OK</p>
-        </div>
+        <p>Routes, middleware, error handling</p>
       </div>
 
-      <div class="feature-card" onclick="toggleTemplate(this)">
-        <div class="feature-icon">&#x1F4AC;</div>
+      <div class="feature-card">
+        <div class="code-window" style="margin-bottom: 1rem; font-size: 0.7rem;">
+          <div class="code-bar" style="padding: 0.4rem 0.6rem;">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title" style="font-size: 0.7rem;">Chat</span>
+          </div>
+          <div style="padding: 1rem; text-align: left; background: var(--bg); min-height: 120px;">
+            <div style="display: flex; gap: 0.3rem; align-items: flex-start; margin-bottom: 0.4rem;">
+              <div style="background: var(--accent); color: white; font-size: 0.55rem; padding: 0.2rem 0.5rem; border-radius: 8px; max-width: 70%;">Hey everyone!</div>
+            </div>
+            <div style="display: flex; gap: 0.3rem; align-items: flex-start; justify-content: flex-end; margin-bottom: 0.4rem;">
+              <div style="background: var(--bg3); color: var(--text); font-size: 0.55rem; padding: 0.2rem 0.5rem; border-radius: 8px; max-width: 70%;">Welcome to PT chat</div>
+            </div>
+            <div style="display: flex; gap: 0.3rem; align-items: flex-start; margin-bottom: 0.4rem;">
+              <div style="background: var(--accent); color: white; font-size: 0.55rem; padding: 0.2rem 0.5rem; border-radius: 8px; max-width: 70%;">This is cool!</div>
+            </div>
+          </div>
+        </div>
         <h3>Chat Server</h3>
-        <p>Real-time chat app with rooms and message history.</p>
-        <div class="template-preview" style="display:none; margin-top:1rem;">
-          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let messages = [];
-
-httpListen(3000, (req) => {
-  if (req.path is "/api/messages") {
-    return {status: 200, body: toString(messages)};
-  }
-  if (req.method is "POST") {
-    push(messages, {user: req.body.user, text: req.body.text});
-  }
-});</code></pre>
-          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">POST /api/messages &rarr; 201 Created</p>
-        </div>
+        <p>Rooms, usernames, message history</p>
       </div>
 
-      <div class="feature-card" onclick="toggleTemplate(this)">
-        <div class="feature-icon">&#x1F4CA;</div>
-        <h3>Dashboard</h3>
-        <p>Admin dashboard with charts, tables, and user management.</p>
-        <div class="template-preview" style="display:none; margin-top:1rem;">
-          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let stats = {users: 1234, revenue: 56789};
-
-httpListen(3000, (req) => {
-  if (req.path is "/api/stats") {
-    return {status: 200, body: toString(stats)};
-  }
-  if (req.path is "/") {
-    return readFile("dashboard.html");
-  }
-});</code></pre>
-          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET /api/stats &rarr; 200 OK</p>
+      <div class="feature-card">
+        <div class="code-window" style="margin-bottom: 1rem; font-size: 0.7rem;">
+          <div class="code-bar" style="padding: 0.4rem 0.6rem;">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title" style="font-size: 0.7rem;">Dashboard</span>
+          </div>
+          <div style="padding: 1rem; text-align: left; background: var(--bg); min-height: 120px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; margin-bottom: 0.5rem;">
+              <div style="background: var(--bg3); border-radius: 4px; padding: 0.3rem; text-align: center;">
+                <div style="font-size: 0.7rem; color: var(--gold); font-weight: 700;">1,234</div>
+                <div style="font-size: 0.5rem; color: var(--text-dim);">Users</div>
+              </div>
+              <div style="background: var(--bg3); border-radius: 4px; padding: 0.3rem; text-align: center;">
+                <div style="font-size: 0.7rem; color: var(--gold); font-weight: 700;">$56K</div>
+                <div style="font-size: 0.5rem; color: var(--text-dim);">Revenue</div>
+              </div>
+            </div>
+            <div style="background: var(--bg3); border-radius: 4px; padding: 0.3rem;">
+              <div style="font-size: 0.5rem; color: var(--text-dim);">Alice — $99.99 — shipped</div>
+              <div style="font-size: 0.5rem; color: var(--text-dim);">Bob — $149.50 — pending</div>
+            </div>
+          </div>
         </div>
+        <h3>Dashboard</h3>
+        <p>Charts, tables, user management</p>
       </div>
     </div>
   </section>
 
-  <script>
-    function toggleTemplate(card) {
-      const preview = card.querySelector('.template-preview');
-      if (!preview) return;
-      const all = document.querySelectorAll('.template-preview');
-      all.forEach(p => { if (p !== preview) p.style.display = 'none'; });
-      preview.style.display = preview.style.display === 'none' ? 'block' : 'none';
-    }
-
-    document.querySelectorAll('a[href^="/greet"]').forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        fetch(a.href).then(r => r.text()).then(data => {
-          alert(data);
-        });
-      });
-    });
-  </script>
   <footer>
     <p>Built with PT Programming Language &mdash; <a href="https://github.com/phyothant-dev/PT-Programming-Language" target="_blank">View on GitHub</a></p>
   </footer>
