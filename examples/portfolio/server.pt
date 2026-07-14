@@ -1,0 +1,50 @@
+let template = readFile("templates/portfolio.html");
+
+class Project {
+  name = "";
+  description = "";
+  url = "";
+
+  fn init(name, desc, url) {
+    this.name = name;
+    this.description = desc;
+    this.url = url;
+  }
+
+  fn render() {
+    return `
+      <div class="project">
+        <h3>${this.name}</h3>
+        <p>${this.description}</p>
+        <a href="${this.url}">View Project &rarr;</a>
+      </div>`;
+  }
+}
+
+let projects = [
+  Project("PT Language", "A programming language in C++17", "/"),
+  Project("Web Server", "Built-in HTTP server", "/"),
+  Project("CLI Tool", "Interactive REPL and file runner", "/")
+];
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    let projectList = "";
+    for (let p of projects) {
+      projectList = projectList + p.render();
+    }
+    let page = template
+      .replace("{{PROJECTS}}", projectList)
+      .replace("{{NAME}}", "Phyo Thant")
+      .replace("{{BIO}}", "Building PT Programming Language");
+    return page;
+  }
+
+  if (req.path is "/api/contact") {
+    return "{status: \"success\", message: \"Message received!\"}";
+  }
+
+  return {status: 404, body: "<h1>404</h1>"};
+});

@@ -1,0 +1,38 @@
+let stats = {
+  users: 1234,
+  revenue: 56789,
+  orders: 456,
+  growth: 12.5
+};
+
+let recentOrders = [
+  {id: 1001, customer: "Alice", amount: 99.99, status: "shipped"},
+  {id: 1002, customer: "Bob", amount: 149.50, status: "pending"},
+  {id: 1003, customer: "Charlie", amount: 29.99, status: "delivered"}
+];
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    return readFile("dashboard.html");
+  }
+
+  if (req.path is "/api/stats") {
+    return {
+      status: 200,
+      headers: {"Content-Type": "application/json"},
+      body: toString(stats)
+    };
+  }
+
+  if (req.path is "/api/orders") {
+    return {
+      status: 200,
+      headers: {"Content-Type": "application/json"},
+      body: toString(recentOrders)
+    };
+  }
+
+  return {status: 404, body: "{\"error\": \"Not Found\"}"};
+});

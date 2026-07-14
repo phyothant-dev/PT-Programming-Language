@@ -1,0 +1,49 @@
+let todos = [];
+let nextId = 1;
+
+fn parseBody(body) {
+  let result = {};
+  let pairs = split(body, "&");
+  for (let pair of pairs) {
+    let kv = split(pair, "=");
+    if (len(kv) is 2) {
+      result[kv[0]] = kv[1];
+    }
+  }
+  return result;
+}
+
+fn jsonResponse(data) {
+  return {
+    status: 200,
+    headers: {"Content-Type": "application/json"},
+    body: toString(data)
+  };
+}
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/" and req.method is "GET") {
+    return readFile("index.html");
+  }
+
+  if (req.path is "/api/todos" and req.method is "GET") {
+    return jsonResponse(todos);
+  }
+
+  if (req.path is "/api/todos" and req.method is "POST") {
+    let data = parseBody(req.body);
+    let todo = {id: nextId, text: data.text, done: false};
+    push(todos, todo);
+    nextId++;
+    return jsonResponse(todo);
+  }
+
+  if (req.path is "/api/todos" and req.method is "DELETE") {
+    todos = [];
+    return jsonResponse({status: "cleared"});
+  }
+
+  return {status: 404, body: "{\"error\": \"Not Found\"}"};
+});

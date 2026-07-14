@@ -1,0 +1,42 @@
+let messages = [];
+let users = [];
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    return readFile("chat.html");
+  }
+
+  if (req.path is "/api/messages" and req.method is "GET") {
+    return {
+      status: 200,
+      headers: {"Content-Type": "application/json"},
+      body: toString(messages)
+    };
+  }
+
+  if (req.path is "/api/messages" and req.method is "POST") {
+    let msg = {
+      user: req.body.user,
+      text: req.body.text,
+      time: "now"
+    };
+    push(messages, msg);
+    return {
+      status: 201,
+      headers: {"Content-Type": "application/json"},
+      body: toString(msg)
+    };
+  }
+
+  if (req.path is "/api/users") {
+    return {
+      status: 200,
+      headers: {"Content-Type": "application/json"},
+      body: toString(users)
+    };
+  }
+
+  return {status: 404, body: "<h1>404</h1>"};
+});

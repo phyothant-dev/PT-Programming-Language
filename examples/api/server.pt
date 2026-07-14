@@ -1,0 +1,37 @@
+let users = [
+  {id: 1, name: "Alice", email: "alice@example.com"},
+  {id: 2, name: "Bob", email: "bob@example.com"}
+];
+
+fn json(status, data) {
+  return {
+    status: status,
+    headers: {"Content-Type": "application/json"},
+    body: toString(data)
+  };
+}
+
+httpListen(3001, (req) => {
+  show(req.method + " " + req.path);
+
+  // CORS headers
+  if (req.method is "OPTIONS") {
+    return {status: 204, headers: {"Access-Control-Allow-Origin": "*"}};
+  }
+
+  if (req.path is "/api/users" and req.method is "GET") {
+    return json(200, users);
+  }
+
+  if (req.path is "/api/users" and req.method is "POST") {
+    let newUser = {id: len(users) + 1, name: "New User"};
+    push(users, newUser);
+    return json(201, newUser);
+  }
+
+  if (req.path is "/api/health") {
+    return json(200, {status: "ok", uptime: "running"});
+  }
+
+  return json(404, {error: "Route not found"});
+});

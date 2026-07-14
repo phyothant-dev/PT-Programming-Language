@@ -1,0 +1,49 @@
+let header = readFile("templates/header.html");
+let footer = readFile("templates/footer.html");
+
+let posts = [
+  {title: "Getting Started with PT", slug: "getting-started", date: "2024-01-15"},
+  {title: "Building Web Servers", slug: "web-servers", date: "2024-01-20"},
+  {title: "PT vs JavaScript", slug: "pt-vs-js", date: "2024-02-01"}
+];
+
+fn renderPost(post) {
+  return `
+    <article class="post">
+      <h2><a href="/post/${post.slug}">${post.title}</a></h2>
+      <time>${post.date}</time>
+    </article>`;
+}
+
+fn renderPage(title, content) {
+  return header + `
+    <main>
+      <h1>${title}</h1>
+      ${content}
+    </main>` + footer;
+}
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    let list = "";
+    for (let post of posts) {
+      list = list + renderPost(post);
+    }
+    return renderPage("My Blog", list);
+  }
+
+  if (req.path is "/rss") {
+    let rss = `<?xml version="1.0"?>
+    <rss version="2.0"><channel>
+      <title>My Blog</title>`;
+    for (let post of posts) {
+      rss = rss + `<item><title>${post.title}</title></item>`;
+    }
+    rss = rss + `</channel></rss>`;
+    return {status: 200, headers: {"Content-Type": "application/xml"}, body: rss};
+  }
+
+  return {status: 404, body: "<h1>404 Not Found</h1>"};
+});
