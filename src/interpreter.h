@@ -18,6 +18,8 @@ struct PTInstance;
 
 struct PTValue {
   std::string value;
+  double numValue;
+  bool isNumber;
   std::shared_ptr<PTFunction> function;
   bool isFunction;
   std::shared_ptr<std::vector<PTValue>> array;
@@ -31,29 +33,32 @@ struct PTValue {
   sqlite3* db;
   bool isDatabase;
 
-  PTValue() : value("nil"), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
-  PTValue(std::string v) : value(v), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
-  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), function(f), isFunction(true), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
-  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), function(nullptr), isFunction(false), array(a), isArray(true), map(nullptr), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
-  PTValue(std::shared_ptr<std::unordered_map<std::string, PTValue>> m) : value("<map>"), function(nullptr), isFunction(false), array(nullptr), isArray(false), map(m), isMap(true), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
-  PTValue(std::shared_ptr<PTClass> c) : value("<class>"), isFunction(false), isArray(false), isMap(false), klass(c), isClass(true), isInstance(false), db(nullptr), isDatabase(false) {}
-  PTValue(std::shared_ptr<PTInstance> i) : value("<instance>"), isFunction(false), isArray(false), isMap(false), isClass(false), instance(i), isInstance(true), db(nullptr), isDatabase(false) {}
-  PTValue(sqlite3* d) : value("<database>"), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(d), isDatabase(true) {}
-};
-
-struct Environment {
-  std::unordered_map<std::string, PTValue> values;
-  std::unordered_set<std::string> consts;
-  std::shared_ptr<Environment> enclosing;
-  Environment() = default;
-  Environment(std::shared_ptr<Environment> enc) : enclosing(enc) {}
+  PTValue() : value("nil"), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(const char* v) : value(v), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::string v) : value(std::move(v)), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(double n) : value(""), numValue(n), isNumber(true), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {
+    if (n == static_cast<long long>(n) && n >= -1e15 && n <= 1e15) {
+      value = std::to_string(static_cast<long long>(n));
+    } else {
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%.6g", n);
+      value = buf;
+    }
+  }
+  PTValue(bool b) : value(b ? "true" : "false"), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<PTFunction> f) : value("<fn>"), numValue(0), isNumber(false), function(f), isFunction(true), isArray(false), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<std::vector<PTValue>> a) : value("<array>"), numValue(0), isNumber(false), isFunction(false), array(a), isArray(true), map(nullptr), isMap(false), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<std::unordered_map<std::string, PTValue>> m) : value("<map>"), numValue(0), isNumber(false), isFunction(false), array(nullptr), isArray(false), map(m), isMap(true), isClass(false), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<PTClass> c) : value("<class>"), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), klass(c), isClass(true), isInstance(false), db(nullptr), isDatabase(false) {}
+  PTValue(std::shared_ptr<PTInstance> i) : value("<instance>"), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), isClass(false), instance(i), isInstance(true), db(nullptr), isDatabase(false) {}
+  PTValue(sqlite3* d) : value("<database>"), numValue(0), isNumber(false), isFunction(false), isArray(false), isMap(false), isClass(false), isInstance(false), db(d), isDatabase(true) {}
 };
 
 struct PTFunction {
   std::string name;
   std::vector<std::string> params;
   std::shared_ptr<std::vector<std::unique_ptr<Stmt>>> body;
-  std::shared_ptr<Environment> closure;
+  std::shared_ptr<class Environment> closure;
   bool isStatic = false;
   bool isInit = false;
 };
@@ -70,6 +75,15 @@ struct PTClass {
 struct PTInstance {
   std::shared_ptr<PTClass> klass;
   std::unordered_map<std::string, PTValue> fields;
+};
+
+class Environment {
+public:
+  std::unordered_map<std::string, PTValue> values;
+  std::unordered_set<std::string> consts;
+  std::shared_ptr<Environment> enclosing;
+  Environment() : enclosing(nullptr) {}
+  Environment(std::shared_ptr<Environment> enc) : enclosing(enc) {}
 };
 
 class Interpreter {
@@ -95,5 +109,4 @@ private:
   std::string formatValue(const PTValue& val);
   bool isTruthy(const PTValue& val);
   bool isEqual(const PTValue& a, const PTValue& b);
-  std::string formatNumber(const std::string& val);
 };

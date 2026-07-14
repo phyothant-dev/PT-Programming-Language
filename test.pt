@@ -554,6 +554,7 @@ show("=== exit keyword ===");
 // --- sqlite ---
 show("=== sqlite ===");
 let sdb = sqliteOpen("/tmp/pt_test.db");
+sqliteExec(sdb, "DROP TABLE IF EXISTS test");
 sqliteExec(sdb, "CREATE TABLE test (id INTEGER, val TEXT)");
 sqliteExec(sdb, "INSERT INTO test VALUES (1, 'hello')");
 sqliteExec(sdb, "INSERT INTO test VALUES (2, 'world')");
