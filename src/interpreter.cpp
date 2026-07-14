@@ -36,11 +36,12 @@ void Interpreter::defineVar(const std::string& name, PTValue value) {
 void Interpreter::assignVar(const std::string& name, const PTValue& value) {
   auto e = env;
   while (e) {
-    PTValue* f = e->find(name);
-    if (f) {
-      if (e->isConst(name)) throw PTRuntimeError("Cannot reassign constant '" + name + "'");
-      *f = value;
-      return;
+    for (size_t i = 0; i < e->values.size(); i++) {
+      if (e->values[i].first == name) {
+        for (auto& c : e->consts) { if (c == name) throw PTRuntimeError("Cannot reassign constant '" + name + "'"); }
+        e->values[i].second = value;
+        return;
+      }
     }
     e = e->enclosing;
   }
@@ -55,6 +56,16 @@ const PTValue& Interpreter::getVar(const std::string& name) {
     e = e->enclosing;
   }
   throw PTRuntimeError("Undefined variable '" + name + "'");
+}
+
+const PTValue* Interpreter::findVar(const std::string& name) {
+  auto e = env;
+  while (e) {
+    PTValue* f = e->find(name);
+    if (f) return f;
+    e = e->enclosing;
+  }
+  return nullptr;
 }
 
 bool Interpreter::varExists(const std::string& name) {
@@ -155,7 +166,7 @@ void Interpreter::execute(Stmt& stmt) {
   }
   case StmtType::Block: {
     auto& b = static_cast<BlockStmt&>(stmt);
-    executeBlock(b.statements, std::make_shared<Environment>(env));
+    executeBlock(b.statements, acquireEnv(env));
     break;
   }
   case StmtType::If: {
@@ -168,11 +179,28 @@ void Interpreter::execute(Stmt& stmt) {
   }
   case StmtType::While: {
     auto& w = static_cast<WhileStmt&>(stmt);
-    while (!returning) {
-      if (!isTruthy(evaluate(w.condition.get()))) break;
-      execute(*w.body);
-      if (breaking) { breaking = false; break; }
-      if (continuing) { continuing = false; }
+    if (w.body->stype == StmtType::Block) {
+      auto& body = static_cast<BlockStmt&>(*w.body);
+      auto loopEnv = acquireEnv(env);
+      auto prev = env;
+      while (!returning) {
+        if (!isTruthy(evaluate(w.condition.get()))) break;
+        env = loopEnv;
+        for (auto& s : body.statements) {
+          execute(*s);
+          if (returning || breaking || continuing) break;
+        }
+        if (breaking) { breaking = false; break; }
+        if (continuing) { continuing = false; }
+      }
+      env = prev;
+    } else {
+      while (!returning) {
+        if (!isTruthy(evaluate(w.condition.get()))) break;
+        execute(*w.body);
+        if (breaking) { breaking = false; break; }
+        if (continuing) { continuing = false; }
+      }
     }
     break;
   }
@@ -200,8 +228,8 @@ void Interpreter::execute(Stmt& stmt) {
     break;
   case StmtType::Repeat: {
     auto& rp = static_cast<RepeatStmt&>(stmt);
+    auto repeatEnv = acquireEnv(env);
     for (int i = 0; i < rp.count && !returning; i++) {
-      auto repeatEnv = std::make_shared<Environment>(env);
       auto prev = env;
       env = repeatEnv;
       for (auto& s : rp.body) {
@@ -216,20 +244,40 @@ void Interpreter::execute(Stmt& stmt) {
   }
   case StmtType::For: {
     auto& fr = static_cast<ForStmt&>(stmt);
-    auto forEnv = std::make_shared<Environment>(env);
+    auto forEnv = acquireEnv(env);
     auto prev = env;
     env = forEnv;
     if (fr.initializer) execute(*fr.initializer);
-    while (!returning) {
-      if (fr.condition && !isTruthy(evaluate(fr.condition.get()))) break;
-      execute(*fr.body);
-      if (breaking) { breaking = false; break; }
-      if (continuing) {
-        continuing = false;
+    if (fr.body->stype == StmtType::Block) {
+      auto& body = static_cast<BlockStmt&>(*fr.body);
+      auto bodyEnv = acquireEnv(env);
+      while (!returning) {
+        if (fr.condition && !isTruthy(evaluate(fr.condition.get()))) break;
+        env = bodyEnv;
+        for (auto& s : body.statements) {
+          execute(*s);
+          if (returning || breaking || continuing) break;
+        }
+        if (breaking) { breaking = false; break; }
+        if (continuing) {
+          continuing = false;
+          if (fr.increment) evaluate(fr.increment.get());
+          continue;
+        }
         if (fr.increment) evaluate(fr.increment.get());
-        continue;
       }
-      if (fr.increment) evaluate(fr.increment.get());
+    } else {
+      while (!returning) {
+        if (fr.condition && !isTruthy(evaluate(fr.condition.get()))) break;
+        execute(*fr.body);
+        if (breaking) { breaking = false; break; }
+        if (continuing) {
+          continuing = false;
+          if (fr.increment) evaluate(fr.increment.get());
+          continue;
+        }
+        if (fr.increment) evaluate(fr.increment.get());
+      }
     }
     env = prev;
     break;
@@ -238,7 +286,7 @@ void Interpreter::execute(Stmt& stmt) {
     auto& fe = static_cast<ForEachStmt&>(stmt);
     auto iterable = evaluate(fe.iterable.get());
     if (iterable.isFunction()) throw PTRuntimeError("for-each requires an array or string");
-    auto forEachEnv = std::make_shared<Environment>(env);
+    auto forEachEnv = acquireEnv(env);
     auto prev = env;
     env = forEachEnv;
     if (iterable.isArray()) {
@@ -264,17 +312,17 @@ void Interpreter::execute(Stmt& stmt) {
   case StmtType::Try: {
     auto& ts = static_cast<TryStmt&>(stmt);
     try {
-      auto tryEnv = std::make_shared<Environment>(env);
+      auto tryEnv = acquireEnv(env);
       executeBlock(ts.tryBody, tryEnv);
     } catch (const PTRuntimeError& err) {
       if (!ts.catchBody.empty()) {
-        auto catchEnv = std::make_shared<Environment>(env);
+        auto catchEnv = acquireEnv(env);
         if (!ts.catchVar.empty()) catchEnv->set(ts.catchVar, PTValue(err.what()));
         executeBlock(ts.catchBody, catchEnv);
       }
     }
     if (!ts.finallyBody.empty()) {
-      auto finallyEnv = std::make_shared<Environment>(env);
+      auto finallyEnv = acquireEnv(env);
       executeBlock(ts.finallyBody, finallyEnv);
     }
     break;
@@ -393,7 +441,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto methodIt = parent->methods.find(se->method);
     if (methodIt == parent->methods.end()) throw PTRuntimeError("Undefined parent method '" + se->method + "'");
     auto method = methodIt->second.function;
-    auto methodEnv = std::make_shared<Environment>(method->closure, 8);
+    auto methodEnv = acquireEnv(method->closure);
     methodEnv->set("this", thisVal);
     auto prev = env;
     env = methodEnv;
@@ -444,10 +492,9 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto iterable = evaluate(lc->iterable.get());
     if (!iterable.isArray()) throw PTRuntimeError("List comprehension requires an array");
     auto result = std::make_shared<std::vector<PTValue>>();
+    auto loopEnv = acquireEnv(env);
     for (auto& elem : *iterable.array) {
       if (returning) break;
-      auto loopEnv = std::make_shared<Environment>(env);
-      auto prev = env;
       env = loopEnv;
       env->set(lc->variable, elem);
       if (lc->condition) {
@@ -456,7 +503,6 @@ PTValue Interpreter::evaluate(Expr* expr) {
       } else {
         result->push_back(evaluate(lc->element.get()));
       }
-      env = prev;
     }
     return PTValue(result);
   }
@@ -678,10 +724,66 @@ PTValue Interpreter::evaluate(Expr* expr) {
     auto* c = static_cast<Call*>(expr);
     if (c->callee->type == ExprType::Variable) {
       auto* var = static_cast<Variable*>(c->callee.get());
-      if (!varExists(var->name)) {
+      const PTValue* direct = findVar(var->name);
+      if (!direct) {
         PTValue result = callBuiltin(var->name, c->arguments);
         if (!result.isFunction()) return result;
+        throw PTRuntimeError("Undefined variable '" + var->name + "'");
       }
+      PTValue callee(*direct);
+      if (callee.isClass()) {
+        auto instance = std::make_shared<PTInstance>();
+        instance->klass = callee.klass;
+        auto instanceVal = PTValue(instance);
+        std::vector<PTClass*> chain;
+        for (auto* k = callee.klass.get(); k; k = k->parent.get()) chain.push_back(k);
+        for (int ci = (int)chain.size() - 1; ci >= 0; ci--)
+          for (auto& [fname, fexpr] : chain[ci]->fields)
+            instance->fields[fname] = fexpr ? evaluate(fexpr.get()) : PTValue();
+        PTFunction* initFunc = nullptr;
+        for (auto* k : chain) {
+          auto it = k->methods.find("init");
+          if (it != k->methods.end()) { initFunc = it->second.function.get(); break; }
+        }
+        if (initFunc) {
+          auto callEnv = acquireEnv(initFunc->closure);
+          callEnv->set("this", instanceVal);
+          auto prev = env;
+          env = callEnv;
+          for (size_t i = 0; i < initFunc->params.size(); i++) {
+            PTValue argVal;
+            if (i < c->arguments.size()) argVal = evaluate(c->arguments[i].get());
+            callEnv->set(initFunc->params[i], std::move(argVal));
+          }
+          for (auto& s : *initFunc->body) {
+            execute(*s);
+            if (returning) break;
+          }
+          returning = false;
+          env = prev;
+        }
+        return instanceVal;
+      }
+      if (!callee.isFunction()) throw PTRuntimeError("Can only call functions");
+      auto& fn = callee.function;
+      size_t argCount = c->arguments.size();
+      size_t paramCount = fn->params.size();
+      if (argCount != paramCount)
+        throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
+      auto callEnv = acquireEnv(fn->closure);
+      for (size_t i = 0; i < fn->params.size(); i++)
+        callEnv->setNew(fn->params[i], evaluate(c->arguments[i].get()));
+      auto prev = env;
+      env = callEnv;
+      for (auto& stmt : *fn->body) {
+        execute(*stmt);
+        if (returning) break;
+      }
+      PTValue result = std::move(returnValue);
+      returning = false;
+      returnValue = PTValue();
+      env = prev;
+      return result;
     }
     PTValue callee = evaluate(c->callee.get());
     if (callee.isClass()) {
@@ -699,14 +801,14 @@ PTValue Interpreter::evaluate(Expr* expr) {
         if (it != k->methods.end()) { initFunc = it->second.function.get(); break; }
       }
       if (initFunc) {
-        auto callEnv = std::make_shared<Environment>(initFunc->closure);
-        callEnv->set("this", instanceVal);
+        auto callEnv = acquireEnv(initFunc->closure);
+        callEnv->setNew("this", instanceVal);
         auto prev = env;
         env = callEnv;
         for (size_t i = 0; i < initFunc->params.size(); i++) {
           PTValue argVal;
           if (i < c->arguments.size()) argVal = evaluate(c->arguments[i].get());
-          callEnv->set(initFunc->params[i], std::move(argVal));
+          callEnv->setNew(initFunc->params[i], std::move(argVal));
         }
         for (auto& s : *initFunc->body) {
           execute(*s);
@@ -723,9 +825,9 @@ PTValue Interpreter::evaluate(Expr* expr) {
     size_t paramCount = fn->params.size();
     if (argCount != paramCount)
       throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
-    auto callEnv = std::make_shared<Environment>(fn->closure, fn->params.size() + 4);
+    auto callEnv = acquireEnv(fn->closure);
     for (size_t i = 0; i < fn->params.size(); i++)
-      callEnv->set(fn->params[i], evaluate(c->arguments[i].get()));
+      callEnv->setNew(fn->params[i], evaluate(c->arguments[i].get()));
     auto prev = env;
     env = callEnv;
     for (auto& stmt : *fn->body) {
@@ -766,7 +868,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
       for (auto& pattern : mc->patterns) {
         if (pattern->type == ExprType::Variable) {
           if (static_cast<Variable*>(pattern.get())->name == "_") {
-            auto matchEnv = std::make_shared<Environment>(env);
+            auto matchEnv = acquireEnv(env);
             auto prev = env;
             env = matchEnv;
             auto result = evaluate(mc->body.get());
@@ -776,7 +878,7 @@ PTValue Interpreter::evaluate(Expr* expr) {
         }
         PTValue patVal = evaluate(pattern.get());
         if (isEqual(value, patVal)) {
-          auto matchEnv = std::make_shared<Environment>(env);
+          auto matchEnv = acquireEnv(env);
           auto prev = env;
           env = matchEnv;
           auto result = evaluate(mc->body.get());
@@ -798,9 +900,9 @@ PTValue Interpreter::evaluateFunction(const PTValue& fnVal, const std::vector<PT
   auto& fn = fnVal.function;
   if (args.size() != fn->params.size())
     throw PTRuntimeError("Expected " + std::to_string(fn->params.size()) + " arguments but got " + std::to_string(args.size()));
-  auto funcEnv = std::make_shared<Environment>(fn->closure, fn->params.size() + 4);
+  auto funcEnv = acquireEnv(fn->closure);
   for (size_t i = 0; i < fn->params.size(); i++)
-    funcEnv->set(fn->params[i], args[i]);
+    funcEnv->setNew(fn->params[i], args[i]);
   auto prev = env;
   env = funcEnv;
   for (auto& stmt : *fn->body) {

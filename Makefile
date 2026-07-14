@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -O2 -Wall -Wextra
+CXXFLAGS := -std=c++17 -O2 -march=native -Wall -Wextra
 LDFLAGS  := -lsqlite3
 SRC      := src/main.cpp src/lexer.cpp src/parser.cpp src/interpreter.cpp src/http.cpp src/json.cpp src/ptcurl.cpp src/crypto.cpp
 TARGET   := pt

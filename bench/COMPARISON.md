@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.008s | 83x faster |
-| **Python 3** | 0.051s | 13x faster |
-| **Ruby** | 0.050s | 13x faster |
-| **PT** | 0.67s | 1x |
+| **Node.js** (V8) | 0.008s | 60x faster |
+| **Python 3** | 0.051s | 9.4x faster |
+| **Ruby** | 0.050s | 9.2x faster |
+| **PT** | 0.48s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -24,9 +24,9 @@ Tests loop overhead and arithmetic.
 | Language | Time | Relative to PT |
 |----------|------|----------------|
 | **Ruby** | 0.000s | optimized `.sum` |
-| **Node.js** (V8) | 0.010s | 146x faster |
-| **Python 3** | 0.077s | 19x faster |
-| **PT** | 1.46s | 1x |
+| **Node.js** (V8) | 0.010s | 128x faster |
+| **Python 3** | 0.077s | 16.6x faster |
+| **PT** | 1.28s | 1x |
 
 ### String Concatenation — 100,000 iterations
 
@@ -34,9 +34,9 @@ Tests string allocation and memory handling.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.003s | 116x faster |
-| **PT** | 0.35s | 1x |
+| **Node.js** (V8) | 0.003s | 117x faster |
 | **Python 3** | 0.125s | **PT is 2.8x slower** |
+| **PT** | 0.35s | 1x |
 | **Ruby** | 0.225s | **PT is 1.6x faster** |
 
 ### Array Push + Iterate — 100,000 items
@@ -45,30 +45,39 @@ Tests array allocation, push, and indexed access.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Python 3** | 0.002s | 20x faster |
-| **Ruby** | 0.003s | 13x faster |
-| **Node.js** (V8) | 0.003s | 13x faster |
-| **PT** | 0.039s | 1x |
+| **Python 3** | 0.002s | 18x faster |
+| **Ruby** | 0.003s | 12x faster |
+| **Node.js** (V8) | 0.003s | 12x faster |
+| **PT** | 0.036s | 1x |
 
 ## Summary Table
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.67s | 0.051s | 0.008s | 0.050s |
-| Loop 10M | 1.46s | 0.077s | 0.010s | ~0s |
+| fib(30) | 0.48s | 0.051s | 0.008s | 0.050s |
+| Loop 10M | 1.28s | 0.077s | 0.010s | ~0s |
 | String 100K | 0.35s | 0.125s | 0.003s | 0.225s |
-| Array 100K | 0.039s | 0.002s | 0.003s | 0.003s |
+| Array 100K | 0.036s | 0.002s | 0.003s | 0.003s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | After (v2) | Speedup |
+| Benchmark | Before (v1) | After (v3) | Speedup |
 |-----------|--------|-------|---------|
-| Loop 10M | 20.31s | 1.46s | **13.9x** |
-| Array 100K | 0.56s | 0.039s | **14.4x** |
+| Loop 10M | 20.31s | 1.28s | **15.9x** |
+| Array 100K | 0.56s | 0.036s | **15.6x** |
 | String 100K | 0.63s | 0.35s | **1.8x** |
-| fib(30) | 28.48s | 0.67s | **42.5x** |
+| fib(30) | 28.48s | 0.48s | **59.3x** |
 
-### What was optimized
+### What was optimized (v3)
+
+1. **All previous optimizations** (v1→v2): numeric fast path, switch dispatch, flag-based control flow, lazy string, const PTValue&, vector-based environment.
+2. **Environment pool allocator** — reuses Environment objects to avoid repeated heap allocation.
+3. **Single-scope variable lookup** — `findVar()` does one scope walk instead of two in function calls (eliminated redundant `varExists()` + `evaluate(Variable)` double walk).
+4. **Loop environment reuse** — While, For, ForEach, Repeat loops create one environment and reuse it across iterations instead of allocating per-iteration.
+5. **Pool allocator for all scopes** — Block, Try, ListComp, Match all use `acquireEnv()` pool instead of `std::make_shared<Environment>()`.
+6. **`setNew()` for function params** — skips redundant linear scan when setting fresh environment variables.
+
+### What was optimized (v2)
 
 1. **Numeric fast path** — `PTValue(double)` stores numbers as native doubles alongside the string representation. Arithmetic and comparisons use the double directly, skipping `std::stod()` and `std::to_string()`.
 2. **Switch dispatch** — replaced 15+ `dynamic_cast` checks per `evaluate()` call with a single integer switch on `ExprType`.
@@ -85,7 +94,7 @@ Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, in
 
 ## Where PT is competitive
 
-- **Fibonacci** — PT is now within **13x of Python** and **13x of Ruby** for function-call-heavy workloads (down from 433x).
+- **Fibonacci** — PT is now within **9x of Python** and **9x of Ruby** for function-call-heavy workloads (down from 433x).
 - **String operations** — PT's builtins (`replace`, `split`, `join`, `substr`) call C++ `std::string` directly. PT is **1.6x faster than Ruby** for string concatenation.
 - **Array operations** — `push`, `pop`, `len` use `std::vector` underneath.
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.

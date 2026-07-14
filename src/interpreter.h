@@ -141,10 +141,20 @@ public:
     values.reserve(reserveSlots);
   }
 
+  void reset(std::shared_ptr<Environment> enc) {
+    values.clear();
+    consts.clear();
+    enclosing = enc;
+  }
+
   void set(const std::string& name, PTValue val) {
     for (auto& [k, v] : values) {
       if (k == name) { v = std::move(val); return; }
     }
+    values.emplace_back(name, std::move(val));
+  }
+
+  void setNew(const std::string& name, PTValue val) {
     values.emplace_back(name, std::move(val));
   }
 
@@ -180,9 +190,19 @@ private:
   bool breaking = false;
   bool continuing = false;
 
+  std::vector<Environment*> envPool;
+  std::shared_ptr<Environment> acquireEnv(std::shared_ptr<Environment> enclosing) {
+    Environment* raw;
+    if (!envPool.empty()) { raw = envPool.back(); envPool.pop_back(); }
+    else { raw = new Environment(); }
+    raw->reset(enclosing);
+    return std::shared_ptr<Environment>(raw, [this](Environment* e) { envPool.push_back(e); });
+  }
+
   void defineVar(const std::string& name, PTValue value);
   void assignVar(const std::string& name, const PTValue& value);
   const PTValue& getVar(const std::string& name);
+  const PTValue* findVar(const std::string& name);
   bool varExists(const std::string& name);
 
   void execute(Stmt& stmt);
