@@ -128,45 +128,142 @@
   <section class="features" style="padding-top: 2rem;">
     <h2>Build With PT</h2>
     <p style="color: var(--text-dim); margin-bottom: 3rem;">Start building in seconds. Pick a template and start coding.</p>
-    <div class="feature-grid">
-      <div class="feature-card" style="cursor: pointer;" onclick="window.open('https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/blog', '_blank')">
+    <div class="feature-grid" id="templates">
+      <div class="feature-card" onclick="toggleTemplate(this)">
         <div class="feature-icon">&#x1F4DD;</div>
         <h3>Blog</h3>
-        <p>A clean blog with markdown posts, tags, and an RSS feed. Powered by PT file I/O.</p>
-        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 1rem;">blog &rarr;</p>
+        <p>A clean blog with markdown posts and RSS feed.</p>
+        <div class="template-preview" style="display:none; margin-top:1rem;">
+          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let posts = [
+  {title: "Getting Started", slug: "start"},
+  {title: "Web Servers", slug: "web"}
+];
+
+httpListen(3000, (req) => {
+  if (req.path is "/") {
+    return renderPage("Blog", posts);
+  }
+});</code></pre>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET / &rarr; 200 OK</p>
+        </div>
+        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem;">blog &rarr;</p>
       </div>
-      <div class="feature-card" style="cursor: pointer;" onclick="window.open('https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/portfolio', '_blank')">
+
+      <div class="feature-card" onclick="toggleTemplate(this)">
         <div class="feature-icon">&#x1F3A8;</div>
         <h3>Portfolio</h3>
-        <p>A personal portfolio site with project gallery, contact form, and dark mode.</p>
-        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 1rem;">portfolio &rarr;</p>
+        <p>Personal portfolio with project gallery and contact form.</p>
+        <div class="template-preview" style="display:none; margin-top:1rem;">
+          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>class Project {
+  fn init(name, desc) {
+    this.name = name;
+    this.desc = desc;
+  }
+  fn render() {
+    return "&lt;h3&gt;" + this.name + "&lt;/h3&gt;";
+  }
+}
+
+httpListen(3000, (req) => {
+  return renderPortfolio(projects);
+});</code></pre>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET / &rarr; 200 OK</p>
+        </div>
+        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem;">portfolio &rarr;</p>
       </div>
-      <div class="feature-card" style="cursor: pointer;" onclick="window.open('https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/todo', '_blank')">
+
+      <div class="feature-card" onclick="toggleTemplate(this)">
         <div class="feature-icon">&#x2705;</div>
         <h3>Todo App</h3>
-        <p>A full-stack todo app with JSON API, categories, and priority levels.</p>
-        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 1rem;">todo &rarr;</p>
+        <p>Full-stack todo app with JSON API and categories.</p>
+        <div class="template-preview" style="display:none; margin-top:1rem;">
+          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let todos = [];
+
+httpListen(3000, (req) => {
+  if (req.path is "/api/todos") {
+    return {status: 200, body: toString(todos)};
+  }
+  if (req.method is "POST") {
+    push(todos, {text: req.body, done: false});
+  }
+});</code></pre>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">POST /api/todos &rarr; 201 Created</p>
+        </div>
+        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem;">todo &rarr;</p>
       </div>
-      <div class="feature-card" style="cursor: pointer;" onclick="window.open('https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/api', '_blank')">
+
+      <div class="feature-card" onclick="toggleTemplate(this)">
         <div class="feature-icon">&#x1F4E1;</div>
         <h3>REST API</h3>
-        <p>A JSON API server with routes, middleware, and error handling.</p>
-        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 1rem;">api &rarr;</p>
+        <p>JSON API server with routes, middleware, and error handling.</p>
+        <div class="template-preview" style="display:none; margin-top:1rem;">
+          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let users = [
+  {id: 1, name: "Alice"},
+  {id: 2, name: "Bob"}
+];
+
+httpListen(3001, (req) => {
+  if (req.path is "/api/users") {
+    return {status: 200, body: toString(users)};
+  }
+  return {status: 404, body: "Not Found"};
+});</code></pre>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET /api/users &rarr; 200 OK</p>
+        </div>
+        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem;">api &rarr;</p>
       </div>
-      <div class="feature-card" style="cursor: pointer;" onclick="window.open('https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/chat', '_blank')">
+
+      <div class="feature-card" onclick="toggleTemplate(this)">
         <div class="feature-icon">&#x1F4AC;</div>
         <h3>Chat Server</h3>
-        <p>A real-time chat app with rooms, usernames, and message history.</p>
-        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 1rem;">chat &rarr;</p>
+        <p>Real-time chat app with rooms and message history.</p>
+        <div class="template-preview" style="display:none; margin-top:1rem;">
+          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let messages = [];
+
+httpListen(3000, (req) => {
+  if (req.path is "/api/messages") {
+    return {status: 200, body: toString(messages)};
+  }
+  if (req.method is "POST") {
+    push(messages, {user: req.body.user, text: req.body.text});
+  }
+});</code></pre>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">POST /api/messages &rarr; 201 Created</p>
+        </div>
+        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem;">chat &rarr;</p>
       </div>
-      <div class="feature-card" style="cursor: pointer;" onclick="window.open('https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/dashboard', '_blank')">
+
+      <div class="feature-card" onclick="toggleTemplate(this)">
         <div class="feature-icon">&#x1F4CA;</div>
         <h3>Dashboard</h3>
-        <p>An admin dashboard with charts, tables, and user management.</p>
-        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 1rem;">dashboard &rarr;</p>
+        <p>Admin dashboard with charts, tables, and user management.</p>
+        <div class="template-preview" style="display:none; margin-top:1rem;">
+          <pre style="background:var(--bg); padding:0.8rem; border-radius:8px; font-size:0.75rem; text-align:left; overflow-x:auto;"><code>let stats = {users: 1234, revenue: 56789};
+
+httpListen(3000, (req) => {
+  if (req.path is "/api/stats") {
+    return {status: 200, body: toString(stats)};
+  }
+  if (req.path is "/") {
+    return readFile("dashboard.html");
+  }
+});</code></pre>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem; text-align:left;">GET /api/stats &rarr; 200 OK</p>
+        </div>
+        <p style="color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem;">dashboard &rarr;</p>
       </div>
     </div>
   </section>
+
+  <script>
+    function toggleTemplate(card) {
+      const preview = card.querySelector('.template-preview');
+      if (!preview) return;
+      const all = document.querySelectorAll('.template-preview');
+      all.forEach(p => { if (p !== preview) p.style.display = 'none'; });
+      preview.style.display = preview.style.display === 'none' ? 'block' : 'none';
+    }
+  </script>
 
   <footer>
     <p>Built with PT Programming Language &mdash; <a href="https://github.com/phyothant-dev/PT-Programming-Language" target="_blank">View on GitHub</a></p>
