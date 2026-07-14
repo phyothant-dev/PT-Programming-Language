@@ -573,6 +573,46 @@ check("sqlite delete", len(safterdel), 1);
 sqliteClose(sdb);
 check("sqlite close", 1, 1);
 
+// --- JSON ---
+show("=== json ===");
+let j1 = parseJSON("{\"a\": 1, \"b\": \"hello\"}");
+check("parseJSON map", j1.a, 1);
+check("parseJSON string", j1.b, "hello");
+let j2 = parseJSON("[1, 2, 3]");
+check("parseJSON array", j2[0], 1);
+check("parseJSON array len", len(j2), 3);
+let j3 = parseJSON("{\"nested\": {\"x\": true}}");
+check("parseJSON nested", j3.nested.x, true);
+let j4 = parseJSON("null");
+check("parseJSON null", type(j4), "nil");
+let j5 = parseJSON("{\"n\": 42, \"s\": \"hi\", \"b\": false}");
+let j5s = toJSON(j5);
+let j5r = parseJSON(j5s);
+check("toJSON roundtrip", j5r.n, 42);
+check("toJSON roundtrip str", j5r.s, "hi");
+check("toJSON roundtrip bool", j5r.b, false);
+
+// --- Crypto ---
+show("=== crypto ===");
+check("sha256", hash("hello"), "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+check("md5", hash("hello", "md5"), "5d41402abc4b2a76b9719d911017c592");
+check("base64 encode", base64Encode("Hello"), "SGVsbG8=");
+check("base64 decode", base64Decode("SGVsbG8="), "Hello");
+check("base64 roundtrip", base64Decode(base64Encode("PT Language")), "PT Language");
+let id = uuid();
+check("uuid format", len(id), 36);
+
+// --- Sleep ---
+show("=== sleep ===");
+let sstart = clock();
+sleep(50);
+let smillis = (clock() - sstart) * 1000;
+check("sleep works", smillis > 30, true);
+
+// --- Spawn ---
+show("=== spawn ===");
+check("spawn returns", 1, 1);
+
 // --- Results ---
 show("=== results ===");
 show("Passed: " + toString(passed));

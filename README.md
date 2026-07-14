@@ -2,7 +2,7 @@
 
 A simple, readable programming language implemented in C++17 — built by [Phyo Thant](https://github.com/phyothant-dev) as a learning project in language design and implementation.
 
-**[Live Demo](https://pt-language-production.up.railway.app)** — website built and served entirely in PT.
+**[GitHub Pages](https://phyothant-dev.github.io/PT-Programming-Language/)** — language docs and playground.
 
 ---
 
@@ -135,7 +135,7 @@ httpListen(3000, (req) => {
   }
 
   if (req.path is "/api/hello") {
-    return {status: 200, headers: {"content-type": "application/json"}, body: "{\"hello\": \"world\"}"};
+    return {status: 200, headers: {"content-type": "application/json"}, body: toJSON({hello: "world"})};
   }
 
   return {status: 404, body: "<h1>404</h1>"};
@@ -162,22 +162,18 @@ pt server.pt
 // Simple HTML response
 return "<h1>Hello!</h1>";
 
-// Full control response
-return {
-  status: 200,
-  headers: {"content-type": "application/json"},
-  body: "{\"key\": \"value\"}"
-};
+// JSON API response
+return {status: 200, headers: {"content-type": "application/json"}, body: toJSON({key: "value"})};
 ```
 
-### Deploy to Railway
+### Deploy with Docker
 
-The project includes a Dockerfile for one-click deployment:
+The project includes a Dockerfile for containerized deployment:
 
-1. Push to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo
-3. Select your repo — Railway builds and deploys automatically
-4. Your site is live at `https://your-project.up.railway.app`
+```sh
+docker build -t pt-server .
+docker run -p 3000:3000 pt-server
+```
 
 ---
 
@@ -244,9 +240,22 @@ The project includes a Dockerfile for one-click deployment:
 ### Web & I/O
 
 - **HTTP server** — `httpListen(port, handler)` with POSIX sockets
+- **HTTP client** — `httpGet(url)`, `httpPost(url, body)`, `httpPut(url, body)`, `httpDelete(url)`
+- **JSON** — `parseJSON(str)` → maps/arrays, `toJSON(val)` → JSON string with optional pretty-print
 - **File I/O** — `readFile(path)`, `writeFile(path, content)`, `fileExists(path)`
 - **Environment** — `getenv("PORT")` to read environment variables
 - **Imports** — `import "module.pt";` or `import "module.pt" as mod;`
+
+### Crypto & Auth
+
+- **Hashing** — `hash(str)` (SHA-256), `hash(str, "md5")` (MD5)
+- **Base64** — `base64Encode(str)`, `base64Decode(str)`
+- **UUID** — `uuid()` generates a v4 UUID
+
+### Concurrency
+
+- **Spawn** — `spawn(fn, args...)` runs function in a background thread
+- **Sleep** — `sleep(ms)` pauses execution for N milliseconds
 
 ### Other
 
@@ -440,15 +449,35 @@ httpListen(3000, (req) => {
 
   if (req.path is "/") return page;
 
-  if (req.path is "/api/data") {
-    return {
-      status: 200,
-      headers: {"content-type": "application/json"},
-      body: "{\"message\": \"Hello from PT!\"}"
-    };
+  if (req.path is "/api/hello") {
+    return {status: 200, headers: {"content-type": "application/json"}, body: toJSON({hello: "world"})};
   }
 
   return {status: 404, body: "<h1>404</h1>"};
+});
+```
+
+### Full-Stack Web App
+
+```pt
+import "auth.pt" as auth;
+
+let db = sqliteOpen("app.db");
+sqliteExec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)");
+
+httpListen(3000, (req) => {
+  if (req.path is "/api/users" && req.method is "GET") {
+    let users = sqliteQuery(db, "SELECT * FROM users");
+    return {status: 200, headers: {"content-type": "application/json"}, body: toJSON(users)};
+  }
+
+  if (req.path is "/api/users" && req.method is "POST") {
+    let data = parseJSON(req.body);
+    sqliteExec(db, "INSERT INTO users (name, email) VALUES ('" + data.name + "', '" + data.email + "')");
+    return {status: 201, body: toJSON({ok: true, id: uuid()})};
+  }
+
+  return {status: 404, body: toJSON({error: "not found"})};
 });
 ```
 
@@ -517,6 +546,39 @@ httpListen(3000, (req) => {
 | `writeFile(path, content)` | Write to file |
 | `fileExists(path)` | Check if file exists |
 | `httpListen(port, handler)` | Start HTTP server |
+| `httpGet(url)` | HTTP GET request |
+| `httpPost(url, body)` | HTTP POST request |
+| `httpPut(url, body)` | HTTP PUT request |
+| `httpDelete(url)` | HTTP DELETE request |
+| `parseJSON(str)` | Parse JSON string to map/array |
+| `toJSON(val)` | Serialize to JSON string |
+
+### Crypto & Auth
+| Function | Description |
+|----------|-------------|
+| `hash(str)` | SHA-256 hash |
+| `hash(str, "md5")` | MD5 hash |
+| `base64Encode(str)` | Base64 encode |
+| `base64Decode(str)` | Base64 decode |
+| `uuid()` | Generate v4 UUID |
+
+### Concurrency
+| Function | Description |
+|----------|-------------|
+| `spawn(fn, args...)` | Run function in background thread |
+| `sleep(ms)` | Pause execution for N milliseconds |
+
+### Database
+| Function | Description |
+|----------|-------------|
+| `sqliteOpen(path)` | Open SQLite database |
+| `sqliteExec(db, sql)` | Execute SQL (no result) |
+| `sqliteQuery(db, sql)` | Execute SQL query (returns rows) |
+| `sqliteClose(db)` | Close database |
+| `pgOpen(connStr)` | Open PostgreSQL connection |
+| `pgExec(db, sql)` | Execute SQL (no result) |
+| `pgQuery(db, sql)` | Execute SQL query (returns rows) |
+| `pgClose(db)` | Close connection |
 
 ---
 
@@ -527,11 +589,10 @@ PT-Programming-Language/
 ├── pt                  # compiled binary
 ├── Makefile            # build system
 ├── Dockerfile          # Docker build for deployment
-├── railway.json        # Railway platform config
 ├── install.sh          # one-line installer
 ├── web.pt              # web demo entry point
 ├── server.pt           # production web server
-├── test.pt             # test suite (163 tests)
+├── test.pt             # test suite (186 tests)
 ├── README.md
 ├── .gitignore
 ├── demo/               # website files
@@ -547,7 +608,11 @@ PT-Programming-Language/
     ├── ast.h           # AST node definitions
     ├── parser.h/.cpp   # parser — tokens → AST
     ├── http.h/.cpp     # HTTP server (POSIX sockets)
-    └── interpreter.h/.cpp  # tree-walk interpreter
+    ├── interpreter.h/.cpp  # tree-walk interpreter
+    ├── json.h/.cpp     # JSON parser/serializer
+    ├── ptcurl.h/.cpp   # HTTP client (libcurl)
+    ├── crypto.h/.cpp   # SHA-256, MD5, Base64, UUID
+    └── pg.h/.cpp       # PostgreSQL driver (optional)
 ```
 
 ---
@@ -556,6 +621,8 @@ PT-Programming-Language/
 
 - **C++17 compiler** — g++ 7+ or clang++ 5+
 - **Git** — to clone the repository
+- **libcurl** — for HTTP client (`httpGet`, `httpPost`, etc.)
+- **libpq** (optional) — for PostgreSQL support, build with `make pg`
 
 No other dependencies. No package managers. No runtime required.
 

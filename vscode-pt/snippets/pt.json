@@ -114,6 +114,31 @@
     "body": "let db = sqliteOpen(\"$1\");\n$0\nsqliteClose(db);",
     "description": "SQLite database"
   },
+  "JSON Parse": {
+    "prefix": "json",
+    "body": "let data = parseJSON($1);\n$0",
+    "description": "Parse JSON string"
+  },
+  "HTTP GET": {
+    "prefix": "httpget",
+    "body": "let resp = httpGet($1);\nshow(resp.status);\nshow(resp.body);\n$0",
+    "description": "HTTP GET request"
+  },
+  "HTTP POST": {
+    "prefix": "httppost",
+    "body": "let resp = httpPost($1, $2);\nshow(resp.status);\nshow(resp.body);\n$0",
+    "description": "HTTP POST request"
+  },
+  "Hash": {
+    "prefix": "hash",
+    "body": "let hashed = hash($1);\n$0",
+    "description": "SHA256 hash"
+  },
+  "PostgreSQL": {
+    "prefix": "pg",
+    "body": "let db = pgOpen($1);\n$0\npgClose(db);",
+    "description": "PostgreSQL database"
+  },
   "Main": {
     "prefix": "main",
     "body": "// $1\nshow(\"Hello, World!\");\n",

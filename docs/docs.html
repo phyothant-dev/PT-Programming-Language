@@ -60,8 +60,12 @@
       <a href="#enums">Enums</a>
       <h3>Web</h3>
       <a href="#server">HTTP Server</a>
+      <a href="#httpclient">HTTP Client</a>
+      <a href="#json">JSON</a>
       <a href="#fileio">File I/O</a>
       <a href="#database">SQLite</a>
+      <a href="#crypto">Crypto</a>
+      <a href="#concurrency">Concurrency</a>
       <h3>Reference</h3>
       <a href="#performance">Performance</a>
     </div>
@@ -306,13 +310,37 @@ match (Color.RED) {
   }
 
   if (req.path is "/api/hello") {
-    return "{message: Hello from PT!}";
+    return toJSON({message: "Hello from PT!"});
   }
 
   return {status: 404, body: "Not Found"};
 });</code></pre>
       <p><code>req</code> map: <code>method</code>, <code>path</code>, <code>headers</code>, <code>body</code></p>
       <p>Return a <code>string</code> for HTML, or a <code>map</code> with <code>status</code>, <code>headers</code>, <code>body</code>.</p>
+
+      <h2 id="httpclient">HTTP Client</h2>
+      <pre><code>let resp = httpGet("https://api.example.com/data");
+show(resp.status);   // 200
+show(resp.body);     // {"users": [...]}
+show(resp.headers);  // {content-type: application/json}
+
+let post = httpPost("https://api.example.com/users", toJSON({name: "Alice"}));
+let put = httpPut("https://api.example.com/users/1", toJSON({name: "Bob"}));
+let del = httpDelete("https://api.example.com/users/1");</code></pre>
+
+      <h2 id="json">JSON</h2>
+      <pre><code>let data = parseJSON('{"name": "PT", "version": 42}');
+show(data.name);     // PT
+show(data.version);  // 42
+
+let arr = parseJSON("[1, 2, 3]");
+show(arr[0]);        // 1
+
+let json = toJSON({hello: "world", count: 5});
+show(json);          // {"hello":"world","count":5}
+
+let pretty = toJSON({hello: "world"}, true);
+show(pretty);</code></pre>
 
       <h2 id="fileio">File I/O</h2>
       <pre><code>let content = readFile("data.txt");
@@ -347,6 +375,30 @@ sqliteExec(db, "DELETE FROM users WHERE id = 2");
 // Close when done
 sqliteClose(db);</code></pre>
 
+      <h2 id="crypto">Crypto & Auth</h2>
+      <pre><code>let hashed = hash("password123");
+show(hashed);  // SHA-256 hash
+
+let md5hash = hash("hello", "md5");
+show(md5hash);
+
+let encoded = base64Encode("Hello, World!");
+let decoded = base64Decode(encoded);
+show(decoded);  // Hello, World!
+
+let id = uuid();
+show(id);  // 1bd84052-caa0-4bad-ae16-2c52075288e0</code></pre>
+
+      <h2 id="concurrency">Concurrency</h2>
+      <pre><code>fn background() {
+  sleep(1000);
+  show("done in background");
+}
+
+spawn(background);
+show("main continues immediately");
+sleep(2000);</code></pre>
+
       <h2 id="performance">Performance</h2>
       <p>PT is a tree-walk interpreter designed for readability and learning, not raw speed. Here's how it compares to other interpreted languages on common benchmarks:</p>
 
@@ -356,7 +408,7 @@ sqliteClose(db);</code></pre>
         <tr><td>Node.js (V8)</td><td>0.008s</td></tr>
         <tr><td>Python 3</td><td>0.051s</td></tr>
         <tr><td>Ruby</td><td>0.050s</td></tr>
-        <tr><td><strong>PT</strong></td><td>22.08s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.67s</td></tr>
       </table>
 
       <h3>String Concatenation — 100K iterations</h3>
@@ -364,7 +416,7 @@ sqliteClose(db);</code></pre>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
         <tr><td>Python 3</td><td>0.125s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.34s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.35s</td></tr>
         <tr><td>Ruby</td><td>0.225s</td></tr>
       </table>
 
@@ -374,19 +426,20 @@ sqliteClose(db);</code></pre>
         <tr><td>Python 3</td><td>0.002s</td></tr>
         <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
         <tr><td>Ruby</td><td>0.003s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.052s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.039s</td></tr>
       </table>
 
       <h3>Optimization Results</h3>
       <table>
         <tr><th>Benchmark</th><th>Before</th><th>After</th><th>Speedup</th></tr>
-        <tr><td>Loop 10M</td><td>20.31s</td><td>2.04s</td><td><strong>10x</strong></td></tr>
-        <tr><td>Array 100K</td><td>0.56s</td><td>0.052s</td><td><strong>10.8x</strong></td></tr>
-        <tr><td>String 100K</td><td>0.63s</td><td>0.34s</td><td><strong>1.9x</strong></td></tr>
+        <tr><td>Loop 10M</td><td>20.31s</td><td>1.46s</td><td><strong>13.9x</strong></td></tr>
+        <tr><td>Array 100K</td><td>0.56s</td><td>0.039s</td><td><strong>14.4x</strong></td></tr>
+        <tr><td>String 100K</td><td>0.63s</td><td>0.35s</td><td><strong>1.8x</strong></td></tr>
+        <tr><td>fib(30)</td><td>28.48s</td><td>0.67s</td><td><strong>42.5x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">
-        PT is faster than Ruby for string operations. For I/O-bound tasks (HTTP, file I/O, SQLite), PT performs well since system calls dominate over interpreter overhead.
+        PT is faster than Ruby for string operations and within 13x of Python for recursive workloads. For I/O-bound tasks (HTTP, file I/O, SQLite), PT performs well since system calls dominate over interpreter overhead.
         Full benchmark details: <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/bench" target="_blank">bench/</a>
       </p>
     </div>
