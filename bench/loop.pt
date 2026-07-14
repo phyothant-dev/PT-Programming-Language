@@ -1,0 +1,11 @@
+// Benchmark 2: Loop sum (1 to 10_000_000)
+let sum = 0;
+let i = 1;
+let start = clock();
+while (i <= 10000000) {
+  sum += i;
+  i++;
+}
+let elapsed = clock() - start;
+show("Sum: " + toString(sum));
+show("Time: " + toString(elapsed) + "s");

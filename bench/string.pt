@@ -1,0 +1,11 @@
+// Benchmark 3: String concatenation (100_000 iterations)
+let s = "";
+let i = 0;
+let start = clock();
+while (i < 100000) {
+  s += "x";
+  i++;
+}
+let elapsed = clock() - start;
+show("Length: " + toString(len(s)));
+show("Time: " + toString(elapsed) + "s");

@@ -253,6 +253,29 @@ nav {
 
 .demo-card p { color: var(--text-dim); }
 
+/* TABLES */
+.docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.docs-content th, .docs-content td {
+  padding: 0.6rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.docs-content th {
+  color: var(--accent);
+  font-weight: 600;
+}
+.docs-content td:last-child {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
 /* FOOTER */
 footer {
   padding: 3rem;

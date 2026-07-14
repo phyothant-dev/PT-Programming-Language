@@ -2,10 +2,9 @@
   "scopeName": "source.pt",
   "patterns": [
     { "include": "#comments" },
+    { "include": "#strings" },
     { "include": "#keywords" },
     { "include": "#constants" },
-    { "include": "#strings" },
-    { "include": "#interpolation" },
     { "include": "#numbers" },
     { "include": "#operators" },
     { "include": "#functions" },
@@ -24,15 +23,19 @@
       "patterns": [
         {
           "name": "keyword.control.pt",
-          "match": "\\b(if|else|unless|while|for|loop|break|continue|return|try|catch|finally|throw)\\b"
+          "match": "\\b(if|else|unless|while|for|loop|break|continue|return|try|catch|finally|throw|match|repeat)\\b"
         },
         {
           "name": "keyword.declaration.pt",
-          "match": "\\b(let|var|const|fn|import|as)\\b"
+          "match": "\\b(let|var|const|fn|import|export|as|static|class|enum)\\b"
         },
         {
           "name": "keyword.operator.logical.pt",
-          "match": "\\b(and|or|is|isnt)\\b"
+          "match": "\\b(and|or|not|is|isnt)\\b"
+        },
+        {
+          "name": "keyword.other.pt",
+          "match": "\\b(this|super|in)\\b"
         }
       ]
     },
@@ -54,24 +57,20 @@
             {
               "name": "constant.character.escape.pt",
               "match": "\\\\(n|t|r|\\\\|\")"
-            }
-          ]
-        }
-      ]
-    },
-    "interpolation": {
-      "patterns": [
-        {
-          "name": "meta.interpolation.pt",
-          "match": "\\$\\{[^}]*\\}",
-          "patterns": [
-            {
-              "name": "punctuation.definition.interpolation.begin.pt",
-              "match": "\\$\\{"
             },
             {
-              "name": "punctuation.definition.interpolation.end.pt",
-              "match": "\\}"
+              "name": "meta.interpolation.pt",
+              "begin": "\\$\\{",
+              "beginCaptures": {
+                "0": { "name": "punctuation.definition.interpolation.begin.pt" }
+              },
+              "end": "\\}",
+              "endCaptures": {
+                "0": { "name": "punctuation.definition.interpolation.end.pt" }
+              },
+              "patterns": [
+                { "include": "source.pt" }
+              ]
             }
           ]
         }
@@ -106,6 +105,10 @@
         {
           "name": "keyword.operator.unary.pt",
           "match": "!"
+        },
+        {
+          "name": "keyword.operator.increment.pt",
+          "match": "\\+\\+|--"
         }
       ]
     },
@@ -113,7 +116,7 @@
       "patterns": [
         {
           "name": "support.function.pt",
-          "match": "\\b(show|print|len|push|pop|toNum|toString|type|input|assert|clock|random|readFile|writeFile|upper|lower|trim|substr|contains|replace|split|join|indexOf|abs|sqrt|min|max|floor|ceil|round|sort|range|map|filter|reduce|keys|values|has)\\b"
+          "match": "\\b(show|print|len|push|pop|toNum|toString|type|input|assert|clock|random|readFile|writeFile|fileExists|upper|lower|trim|substr|contains|replace|split|join|indexOf|abs|sqrt|min|max|floor|ceil|round|sort|range|map|filter|reduce|keys|values|has|sleep|httpListen|httpServe|sqliteOpen|sqliteExec|sqliteQuery|sqliteClose)\\b"
         }
       ]
     },

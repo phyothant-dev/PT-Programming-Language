@@ -64,6 +64,16 @@
     "body": "loop {\n\t$0\n}",
     "description": "Infinite loop"
   },
+  "Repeat": {
+    "prefix": "repeat",
+    "body": "repeat ($1) {\n\t$0\n}",
+    "description": "Repeat N times"
+  },
+  "Match": {
+    "prefix": "match",
+    "body": "let $1 = match($2) {\n\t$3 => $4\n\t_ => $0\n};",
+    "description": "Match expression"
+  },
   "Try Catch": {
     "prefix": "try",
     "body": "try {\n\t$1\n} catch ($2) {\n\t$0\n}",
@@ -83,6 +93,26 @@
     "prefix": "import",
     "body": "import \"$1\" as $2;",
     "description": "Import a module"
+  },
+  "Class": {
+    "prefix": "class",
+    "body": "class $1 {\n\tinit($2) {\n\t\t$3\n\t}\n\n\t$0\n}",
+    "description": "Define a class"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": "enum $1 {\n\t$2,\n\t$0\n}",
+    "description": "Define an enum"
+  },
+  "HTTP Server": {
+    "prefix": "http",
+    "body": "httpListen($1, (req) => {\n\t$0\n});",
+    "description": "HTTP server listener"
+  },
+  "SQLite": {
+    "prefix": "sqlite",
+    "body": "let db = sqliteOpen(\"$1\");\n$0\nsqliteClose(db);",
+    "description": "SQLite database"
   },
   "Main": {
     "prefix": "main",
