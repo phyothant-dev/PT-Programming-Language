@@ -76,6 +76,9 @@ class BytecodeCompiler {
       else emitConst(PT_NIL);
       int id = interner.intern(v.name);
       if (isTopLevel) {
+        int idx = addLocal(id);
+        emit(Op::STORE_LOCAL); emitU32(idx);
+        emit(Op::LOAD_LOCAL); emitU32(idx);
         emit(Op::DEFINE_VAR); emitU32(id);
       } else {
         emit(Op::STORE_LOCAL); emitU32(addLocal(id));
@@ -88,6 +91,9 @@ class BytecodeCompiler {
       else emitConst(PT_NIL);
       int id = interner.intern(c.name);
       if (isTopLevel) {
+        int idx = addLocal(id);
+        emit(Op::STORE_LOCAL); emitU32(idx);
+        emit(Op::LOAD_LOCAL); emitU32(idx);
         emit(Op::DEFINE_VAR); emitU32(id);
       } else {
         emit(Op::STORE_LOCAL); emitU32(addLocal(id));
@@ -386,15 +392,27 @@ class BytecodeCompiler {
             auto* lv = static_cast<Variable*>(b->left.get());
             if (lv->name == a->name) {
               compileExpr(b->right.get());
-              if (b->op == "+") { emit(Op::ADD_STORE_LOCAL); emitU32(idx); }
-              else if (b->op == "*") { emit(Op::MUL); emit(Op::STORE_LOCAL); emitU32(idx); emit(Op::LOAD_LOCAL); emitU32(idx); }
-              else { compileExpr(b->left.get()); emit(Op::ADD); emit(Op::STORE_LOCAL); emitU32(idx); emit(Op::LOAD_LOCAL); emitU32(idx); }
+              if (b->op == "+") {
+                emit(Op::ADD_STORE_LOCAL); emitU32(idx);
+                if (isTopLevel) { emit(Op::SYNC_ENV); emitU32(id); emitU32(idx); }
+              }
+              else if (b->op == "*") {
+                emit(Op::MUL); emit(Op::STORE_LOCAL); emitU32(idx);
+                if (isTopLevel) { emit(Op::SYNC_ENV); emitU32(id); emitU32(idx); }
+                emit(Op::LOAD_LOCAL); emitU32(idx);
+              }
+              else {
+                compileExpr(b->left.get()); emit(Op::ADD); emit(Op::STORE_LOCAL); emitU32(idx);
+                if (isTopLevel) { emit(Op::SYNC_ENV); emitU32(id); emitU32(idx); }
+                emit(Op::LOAD_LOCAL); emitU32(idx);
+              }
               break;
             }
           }
         }
         compileExpr(a->value.get());
         emit(Op::STORE_LOCAL); emitU32(idx);
+        if (isTopLevel) { emit(Op::SYNC_ENV); emitU32(id); emitU32(idx); }
         emit(Op::LOAD_LOCAL); emitU32(idx);
       } else {
         if (a->value->type == ExprType::Binary) {
@@ -441,6 +459,7 @@ class BytecodeCompiler {
       if (idx >= 0) {
         emit(pe->op == "++" ? Op::INC_LOCAL : Op::DEC_LOCAL);
         emitU32(idx);
+        if (isTopLevel) { emit(Op::SYNC_ENV); emitU32(id); emitU32(idx); }
       } else {
         emit(pe->op == "++" ? Op::INC_GLOBAL : Op::DEC_GLOBAL);
         emitU32(id);
@@ -1197,6 +1216,12 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
       } else {
         lhs = PTValue(formatValue(lhs) + formatValue(rhs));
       }
+      break;
+    }
+    case Op::SYNC_ENV: {
+      uint32_t envId = VM_READ_U32();
+      uint32_t localIdx = VM_READ_U32();
+      assignVar(envId, stack[localStart + localIdx]);
       break;
     }
     }

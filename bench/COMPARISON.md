@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.005s | 41x faster |
-| **Python 3** | 0.053s | 3.9x faster |
-| **Ruby** | 0.047s | 4.3x faster |
-| **PT** | 0.207s | 1x |
+| **Node.js** (V8) | 0.005s | 42x faster |
+| **Python 3** | 0.053s | 4x faster |
+| **Ruby** | 0.047s | 4.5x faster |
+| **PT** | 0.21s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -26,7 +26,7 @@ Tests loop overhead and arithmetic.
 | **Ruby** | 0.000s | optimized `.sum` |
 | **Node.js** (V8) | 0.009s | 67x faster |
 | **Python 3** | 0.075s | 8x faster |
-| **PT** | 0.601s | 1x |
+| **PT** | 0.605s | 1x |
 
 ### String Concatenation — 100,000 iterations
 
@@ -34,10 +34,10 @@ Tests string allocation and memory handling.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.003s | 80x faster |
-| **Python 3** | 0.117s | 2.1x faster |
-| **PT** | 0.241s | 1x |
-| **Ruby** | 0.218s | **PT is 1.1x faster** |
+| **Node.js** (V8) | 0.003s | 46x faster |
+| **Python 3** | 0.117s | 1.2x faster |
+| **PT** | 0.137s | 1x |
+| **Ruby** | 0.218s | **PT is 1.6x faster** |
 
 ### Array Push + Iterate — 100,000 items
 
@@ -54,19 +54,25 @@ Tests array allocation, push, and indexed access.
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.207s | 0.053s | 0.005s | 0.047s |
-| Loop 10M | 0.601s | 0.075s | 0.009s | ~0s |
-| String 100K | 0.241s | 0.117s | 0.003s | 0.218s |
+| fib(30) | 0.21s | 0.053s | 0.005s | 0.047s |
+| Loop 10M | 0.605s | 0.075s | 0.009s | ~0s |
+| String 100K | 0.137s | 0.117s | 0.003s | 0.218s |
 | Array 100K | 0.023s | 0.002s | 0.002s | 0.003s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | v4 | v5 | v7 | v8 | Speedup (v1→v8) |
-|-----------|--------|-------|-------|-------|-------|---------|
-| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | 0.601s | **33.8x** |
-| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | 0.023s | **24.3x** |
-| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | 0.241s | **2.6x** |
-| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | 0.207s | **137x** |
+| Benchmark | Before (v1) | v4 | v5 | v7 | v8 | v9 | Speedup (v1→v9) |
+|-----------|--------|-------|-------|-------|-------|-------|---------|
+| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | 0.601s | 0.605s | **33.6x** |
+| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | 0.023s | 0.023s | **24.3x** |
+| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | 0.241s | 0.137s | **4.6x** |
+| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | 0.207s | 0.21s | **136x** |
+
+### What was optimized (v9)
+
+1. **Dual-store top-level variables** — top-level `let` variables are stored in both a local stack slot (O(1) stack access) and the env (for closure access). `resolveLocal()` finds top-level variables as locals, so all references use fast `LOAD_LOCAL` instead of `LOAD_VAR` (env hash lookup). **1.8x string speedup** because string concat loops read variables thousands of times.
+2. **SYNC_ENV opcode** — after modifying a local that's also in the env (`+=`, `++`), syncs the local value back to the env so closures see updated values. Trades 1 env lookup per modification.
+3. **String benchmark 1.8x faster** — PT is now only 1.2x slower than Python for string concatenation (down from 2.1x).
 
 ### What was optimized (v8)
 
@@ -116,7 +122,7 @@ Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, in
 
 ## Where PT is competitive
 
-- **String operations** — PT is **1.1x faster than Ruby** for string concatenation.
+- **String operations** — PT is only **1.2x slower than Python** for string concatenation and **1.6x faster than Ruby**.
 - **Array operations** — PT is within **7.7x of Ruby** and **11.5x of Python** for array push+iterate.
 - **Fibonacci** — PT is within **3.9x of Python** and **4.3x of Ruby** for function-call-heavy workloads (down from 433x at v1).
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.
