@@ -122,18 +122,27 @@ struct PTValue {
 
 enum class Op : uint8_t {
   LOAD_CONST, LOAD_LOCAL, STORE_LOCAL,
-  LOAD_VAR, STORE_VAR,
+  LOAD_VAR, STORE_VAR, DEFINE_VAR,
   POP,
   ADD, SUB, MUL, DIV, MOD, NEG,
   EQ, NEQ, LT, GT, LTE, GTE,
   NOT,
   JMP, JMP_IF_FALSE, JMP_IF_TRUE,
-  CALL, RETURN
+  CALL, RETURN,
+  PRINT, PRINT_NL,
+  ARRAY_NEW, INDEX_GET, INDEX_SET,
+  DOT_GET, DOT_SET,
+  MAP_NEW,
+  MAKE_FUNCTION,
+  ARRAY_LEN,
+  INC_LOCAL, DEC_LOCAL, ADD_STORE_LOCAL
 };
 
 struct BytecodeChunk {
   std::vector<uint8_t> code;
   std::vector<PTValue> constants;
+  int numLocals = 0;
+  int selfLocal = -1;
 
   void emitOp(Op op) { code.push_back(static_cast<uint8_t>(op)); }
   void emitU32(uint32_t v) {
@@ -162,6 +171,13 @@ struct BytecodeChunk {
     code[offset+3] = static_cast<uint8_t>(dist >> 16);
     code[offset+4] = static_cast<uint8_t>(dist >> 24);
   }
+  void patchJumpTo(size_t offset, size_t target) {
+    int32_t dist = static_cast<int32_t>(target) - static_cast<int32_t>(offset) - 5;
+    code[offset+1] = static_cast<uint8_t>(dist);
+    code[offset+2] = static_cast<uint8_t>(dist >> 8);
+    code[offset+3] = static_cast<uint8_t>(dist >> 16);
+    code[offset+4] = static_cast<uint8_t>(dist >> 24);
+  }
 };
 
 struct PTFunction {
@@ -173,6 +189,7 @@ struct PTFunction {
   std::shared_ptr<BytecodeChunk> bytecode;
   bool isStatic = false;
   bool isInit = false;
+  bool isBuiltin = false;
 };
 
 struct PTClass {
@@ -192,35 +209,38 @@ struct PTInstance {
 class Environment {
 public:
   std::vector<std::pair<int, PTValue>> values;
+  std::unordered_map<int, size_t> idxMap;
   std::vector<int> consts;
   std::shared_ptr<Environment> enclosing;
   Environment() : enclosing(nullptr) {}
   Environment(std::shared_ptr<Environment> enc) : enclosing(enc) {}
   explicit Environment(std::shared_ptr<Environment> enc, size_t reserveSlots) : enclosing(enc) {
     values.reserve(reserveSlots);
+    idxMap.reserve(reserveSlots);
   }
 
   void reset(std::shared_ptr<Environment> enc) {
     values.clear();
+    idxMap.clear();
     consts.clear();
     enclosing = enc;
   }
 
   void set(int id, PTValue val) {
-    for (auto& [k, v] : values) {
-      if (k == id) { v = std::move(val); return; }
-    }
+    auto it = idxMap.find(id);
+    if (it != idxMap.end()) { values[it->second].second = std::move(val); return; }
+    idxMap[id] = values.size();
     values.emplace_back(id, std::move(val));
   }
 
   void setNew(int id, PTValue val) {
+    idxMap[id] = values.size();
     values.emplace_back(id, std::move(val));
   }
 
   PTValue* find(int id) {
-    for (auto& [k, v] : values) {
-      if (k == id) return &v;
-    }
+    auto it = idxMap.find(id);
+    if (it != idxMap.end()) return &values[it->second].second;
     return nullptr;
   }
 
@@ -267,6 +287,7 @@ private:
   void defineVar(int id, PTValue value);
   void assignVar(int id, const PTValue& value);
   const PTValue& getVar(int id);
+  PTValue& getVarRef(int id);
   const PTValue* findVar(int id);
   bool varExists(int id);
 
@@ -285,13 +306,17 @@ private:
     BytecodeChunk* chunk;
     size_t returnIp;
     int returnSp;
+    std::shared_ptr<Environment> savedEnv;
+    int callerLocalStart;
   };
   static const int VM_MAX_FRAMES = 256;
   static const int VM_MAX_STACK = 4096;
   PTValue execBytecode(PTFunction* fn, const std::vector<PTValue>& args = {});
   std::shared_ptr<BytecodeChunk> compileFunction(
-    const std::vector<std::string>& params,
-    const std::vector<int>& paramIds,
-    const std::vector<std::unique_ptr<Stmt>>& body);
+      const std::vector<std::string>& params,
+      const std::vector<int>& paramIds,
+      const std::vector<std::unique_ptr<Stmt>>& body,
+      int selfId = -1);
   bool canCompileBody(const std::vector<std::unique_ptr<Stmt>>& body);
+  void registerBuiltins();
 };

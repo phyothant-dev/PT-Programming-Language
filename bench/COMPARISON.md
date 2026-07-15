@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.008s | 23x faster |
-| **Python 3** | 0.051s | 3.6x faster |
-| **Ruby** | 0.050s | 3.5x faster |
-| **PT** | 0.185s | 1x |
+| **Node.js** (V8) | 0.005s | 42x faster |
+| **Python 3** | 0.051s | 4.1x faster |
+| **Ruby** | 0.049s | 4.3x faster |
+| **PT** | 0.212s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -24,9 +24,9 @@ Tests loop overhead and arithmetic.
 | Language | Time | Relative to PT |
 |----------|------|----------------|
 | **Ruby** | 0.000s | optimized `.sum` |
-| **Node.js** (V8) | 0.010s | 121x faster |
-| **Python 3** | 0.077s | 16.3x faster |
-| **PT** | 1.21s | 1x |
+| **Node.js** (V8) | 0.008s | 160x faster |
+| **Python 3** | 0.075s | 17x faster |
+| **PT** | 1.28s | 1x |
 
 ### String Concatenation — 100,000 iterations
 
@@ -34,10 +34,10 @@ Tests string allocation and memory handling.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.003s | 122x faster |
-| **Python 3** | 0.125s | **PT is 2.9x slower** |
-| **PT** | 0.37s | 1x |
-| **Ruby** | 0.225s | **PT is 1.6x faster** |
+| **Node.js** (V8) | 0.003s | 127x faster |
+| **Python 3** | 0.119s | **PT is 3.1x slower** |
+| **PT** | 0.38s | 1x |
+| **Ruby** | 0.221s | **PT is 1.7x faster** |
 
 ### Array Push + Iterate — 100,000 items
 
@@ -45,28 +45,34 @@ Tests array allocation, push, and indexed access.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Python 3** | 0.002s | 16.5x faster |
-| **Ruby** | 0.003s | 11x faster |
-| **Node.js** (V8) | 0.003s | 11x faster |
-| **PT** | 0.033s | 1x |
+| **Python 3** | 0.002s | 19.5x faster |
+| **Ruby** | 0.003s | 13x faster |
+| **Node.js** (V8) | 0.002s | 19.5x faster |
+| **PT** | 0.039s | 1x |
 
 ## Summary Table
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.185s | 0.051s | 0.008s | 0.050s |
-| Loop 10M | 1.21s | 0.077s | 0.010s | ~0s |
-| String 100K | 0.37s | 0.125s | 0.003s | 0.225s |
-| Array 100K | 0.033s | 0.002s | 0.003s | 0.003s |
+| fib(30) | 0.212s | 0.051s | 0.005s | 0.049s |
+| Loop 10M | 1.28s | 0.075s | 0.008s | ~0s |
+| String 100K | 0.38s | 0.119s | 0.003s | 0.221s |
+| Array 100K | 0.039s | 0.002s | 0.002s | 0.003s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | After (v4) | After (v5) | Speedup (v1→v5) |
-|-----------|--------|-------|-------|---------|
-| Loop 10M | 20.31s | 1.21s | 1.20s | **16.9x** |
-| Array 100K | 0.56s | 0.033s | 0.044s | **12.7x** |
-| String 100K | 0.63s | 0.37s | 0.36s | **1.8x** |
-| fib(30) | 28.48s | 0.45s | 0.185s | **154x** |
+| Benchmark | Before (v1) | After (v4) | After (v5) | After (v7) | Speedup (v1→v7) |
+|-----------|--------|-------|-------|-------|---------|
+| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | **15.9x** |
+| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | **14.4x** |
+| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | **1.7x** |
+| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | **134x** |
+
+### What was optimized (v7)
+
+1. **Nested function bytecode compilation** — functions defined inside bytecode-compiled top-level scripts now have their bodies compiled to bytecode at definition time, just like functions defined in tree-walk mode. This means recursive calls in `fib()` run entirely in the VM instead of falling back to tree-walk per-call.
+2. **Fixed `numLocals` calculation** — the bytecode compiler's `compile()` method now uses `addLocal()` for parameters (which updates `peakLocalCount`) instead of directly pushing to the locals vector. This fixes stack corruption in functions compiled from tree-walk mode with classes/enum/repeat at top-level.
+3. **Lambda bytecode compilation** — lambda expressions in bytecode-compiled contexts also get their bodies compiled to bytecode.
 
 ### What was optimized (v5)
 
@@ -104,8 +110,8 @@ Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, in
 
 ## Where PT is competitive
 
-- **Fibonacci** — PT is now within **2.8x of Python** and **2.7x of Ruby** for function-call-heavy workloads (down from 433x).
-- **String operations** — PT's builtins (`replace`, `split`, `join`, `substr`) call C++ `std::string` directly. PT is **1.6x faster than Ruby** for string concatenation.
+- **Fibonacci** — PT is now within **4.1x of Python** and **4.3x of Ruby** for function-call-heavy workloads (down from 433x at v1).
+- **String operations** — PT's builtins (`replace`, `split`, `join`, `substr`) call C++ `std::string` directly. PT is **1.7x faster than Ruby** for string concatenation.
 - **Array operations** — `push`, `pop`, `len` use `std::vector` underneath.
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.
 
@@ -115,7 +121,7 @@ PT prioritizes:
 
 1. **Readability** — `show`, `let`, `fn`, `unless`, `match` are English-like
 2. **Simplicity** — single-pass lexing, no AST optimization passes
-3. **Learning** — easy to read the C++ source (~3000 lines)
+3. **Learning** — easy to read the C++ source (~3300 lines)
 4. **Safety** — no raw pointers, bounds checking on arrays
 
 Raw speed was never a goal. If you need performance-critical code, write that module in C++ and call it from PT's built-in functions.
