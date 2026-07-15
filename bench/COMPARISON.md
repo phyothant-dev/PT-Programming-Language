@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.008s | 56x faster |
-| **Python 3** | 0.051s | 9.1x faster |
-| **Ruby** | 0.050s | 8.9x faster |
-| **PT** | 0.45s | 1x |
+| **Node.js** (V8) | 0.008s | 23x faster |
+| **Python 3** | 0.051s | 3.6x faster |
+| **Ruby** | 0.050s | 3.5x faster |
+| **PT** | 0.185s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -54,19 +54,25 @@ Tests array allocation, push, and indexed access.
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.45s | 0.051s | 0.008s | 0.050s |
+| fib(30) | 0.185s | 0.051s | 0.008s | 0.050s |
 | Loop 10M | 1.21s | 0.077s | 0.010s | ~0s |
 | String 100K | 0.37s | 0.125s | 0.003s | 0.225s |
 | Array 100K | 0.033s | 0.002s | 0.003s | 0.003s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | After (v4) | Speedup |
-|-----------|--------|-------|---------|
-| Loop 10M | 20.31s | 1.21s | **16.8x** |
-| Array 100K | 0.56s | 0.033s | **17.0x** |
-| String 100K | 0.63s | 0.37s | **1.7x** |
-| fib(30) | 28.48s | 0.45s | **63.3x** |
+| Benchmark | Before (v1) | After (v4) | After (v5) | Speedup (v1→v5) |
+|-----------|--------|-------|-------|---------|
+| Loop 10M | 20.31s | 1.21s | 1.20s | **16.9x** |
+| Array 100K | 0.56s | 0.033s | 0.044s | **12.7x** |
+| String 100K | 0.63s | 0.37s | 0.36s | **1.8x** |
+| fib(30) | 28.48s | 0.45s | 0.185s | **154x** |
+
+### What was optimized (v5)
+
+1. **Bytecode VM for hot function bodies** — functions whose bodies consist of simple statements (var, expr, return, if, while, block, break, continue) are compiled to a register-based bytecode at definition time. The VM executes these with a tight dispatch loop instead of recursive AST traversal. Recursive `fib()` runs entirely in bytecode for a **2.4x speedup**.
+2. **Shared stack for locals** — VM locals live in the same stack array as intermediate values, avoiding separate per-frame allocations.
+3. **Bytecode dispatch** — the Call handler checks `fn->bytecode` and routes to `execBytecode()` for compiled functions, falling back to tree-walk for functions that can't be compiled.
 
 ### What was optimized (v4)
 
@@ -98,7 +104,7 @@ Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, in
 
 ## Where PT is competitive
 
-- **Fibonacci** — PT is now within **9.1x of Python** and **8.9x of Ruby** for function-call-heavy workloads (down from 433x).
+- **Fibonacci** — PT is now within **2.8x of Python** and **2.7x of Ruby** for function-call-heavy workloads (down from 433x).
 - **String operations** — PT's builtins (`replace`, `split`, `join`, `substr`) call C++ `std::string` directly. PT is **1.6x faster than Ruby** for string concatenation.
 - **Array operations** — `push`, `pop`, `len` use `std::vector` underneath.
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.

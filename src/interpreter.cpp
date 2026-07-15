@@ -29,6 +29,249 @@ static const PTValue PT_TRUE(true);
 static const PTValue PT_FALSE(false);
 static const PTValue PT_NIL;
 
+class BytecodeCompiler {
+  BytecodeChunk chunk;
+  StringInterner& interner;
+  struct Local { int id; int depth; };
+  std::vector<Local> locals;
+  int scopeDepth = 0;
+  std::vector<size_t> breakJumps;
+
+  void emit(Op op) { chunk.emitOp(op); }
+  void emitU32(uint32_t v) { chunk.emitU32(v); }
+  int addConst(PTValue v) { return chunk.addConst(std::move(v)); }
+
+  int addLocal(int id) {
+    locals.push_back({id, scopeDepth});
+    return (int)locals.size() - 1;
+  }
+  int resolveLocal(int id) {
+    for (int i = (int)locals.size() - 1; i >= 0; i--)
+      if (locals[i].id == id) return i;
+    return -1;
+  }
+  void beginScope() { scopeDepth++; }
+  void endScope() {
+    int removed = 0;
+    while (!locals.empty() && locals.back().depth >= scopeDepth) {
+      locals.pop_back(); removed++;
+    }
+    scopeDepth--;
+    for (int i = 0; i < removed; i++) emit(Op::POP);
+  }
+  void emitConst(PTValue v) { emit(Op::LOAD_CONST); emitU32(addConst(std::move(v))); }
+
+  void compileStmt(Stmt& stmt) {
+    switch (stmt.stype) {
+    case StmtType::Var: {
+      auto& v = static_cast<VarStmt&>(stmt);
+      if (v.initializer) compileExpr(v.initializer.get());
+      else emitConst(PT_NIL);
+      int id = interner.intern(v.name);
+      emit(Op::STORE_LOCAL); emitU32(addLocal(id));
+      break;
+    }
+    case StmtType::Expr: {
+      auto& e = static_cast<ExprStmt&>(stmt);
+      compileExpr(e.expression.get());
+      emit(Op::POP);
+      break;
+    }
+    case StmtType::Return: {
+      auto& r = static_cast<ReturnStmt&>(stmt);
+      if (r.value) compileExpr(r.value.get());
+      else emitConst(PT_NIL);
+      emit(Op::RETURN);
+      break;
+    }
+    case StmtType::If: {
+      auto& i = static_cast<IfStmt&>(stmt);
+      compileExpr(i.condition.get());
+      size_t falsePatch = chunk.code.size();
+      emit(Op::JMP_IF_FALSE); emitU32(0);
+      compileStmt(*i.thenBranch);
+      if (i.elseBranch) {
+        size_t elsePatch = chunk.code.size();
+        emit(Op::JMP); emitU32(0);
+        chunk.patchJump(falsePatch);
+        compileStmt(*i.elseBranch);
+        chunk.patchJump(elsePatch);
+      } else {
+        chunk.patchJump(falsePatch);
+      }
+      break;
+    }
+    case StmtType::While: {
+      auto& w = static_cast<WhileStmt&>(stmt);
+      size_t loopStart = chunk.code.size();
+      compileExpr(w.condition.get());
+      size_t exitPatch = chunk.code.size();
+      emit(Op::JMP_IF_FALSE); emitU32(0);
+      size_t prevBreak = breakJumps.size();
+      compileStmt(*w.body);
+      emit(Op::JMP);
+      emitU32(static_cast<uint32_t>(loopStart - chunk.code.size() - 4));
+      chunk.patchJump(exitPatch);
+      while (breakJumps.size() > prevBreak) {
+        chunk.patchJump(breakJumps.back()); breakJumps.pop_back();
+      }
+      break;
+    }
+    case StmtType::Block: {
+      auto& b = static_cast<BlockStmt&>(stmt);
+      beginScope();
+      for (auto& s : b.statements) compileStmt(*s);
+      endScope();
+      break;
+    }
+    case StmtType::Break: {
+      size_t patch = chunk.code.size();
+      emit(Op::JMP); emitU32(0);
+      breakJumps.push_back(patch);
+      break;
+    }
+    default: {
+      emitConst(PT_NIL); emit(Op::POP);
+      break;
+    }
+    }
+  }
+
+  void compileExpr(Expr* expr) {
+    switch (expr->type) {
+    case ExprType::Literal: {
+      auto* l = static_cast<Literal*>(expr);
+      if (l->isNumber) emitConst(PTValue(std::stod(l->value)));
+      else if (l->isBool) emitConst(l->value == "true" ? PT_TRUE : PT_FALSE);
+      else if (l->isNil) emitConst(PT_NIL);
+      else emitConst(PTValue(l->value));
+      break;
+    }
+    case ExprType::Variable: {
+      auto* v = static_cast<Variable*>(expr);
+      int id = interner.intern(v->name);
+      int idx = resolveLocal(id);
+      if (idx >= 0) { emit(Op::LOAD_LOCAL); emitU32(idx); }
+      else { emit(Op::LOAD_VAR); emitU32(id); }
+      break;
+    }
+    case ExprType::Binary: {
+      auto* b = static_cast<Binary*>(expr);
+      if (b->op == "and") {
+        compileExpr(b->left.get());
+        size_t p = chunk.code.size(); emit(Op::JMP_IF_FALSE); emitU32(0);
+        compileExpr(b->right.get()); chunk.patchJump(p);
+        break;
+      }
+      if (b->op == "or") {
+        compileExpr(b->left.get());
+        size_t p = chunk.code.size(); emit(Op::JMP_IF_TRUE); emitU32(0);
+        compileExpr(b->right.get()); chunk.patchJump(p);
+        break;
+      }
+      compileExpr(b->left.get()); compileExpr(b->right.get());
+      if (b->op == "+") emit(Op::ADD);
+      else if (b->op == "-") emit(Op::SUB);
+      else if (b->op == "*") emit(Op::MUL);
+      else if (b->op == "/") emit(Op::DIV);
+      else if (b->op == "%") emit(Op::MOD);
+      else if (b->op == "==" || b->op == "is") emit(Op::EQ);
+      else if (b->op == "!=" || b->op == "isnt") emit(Op::NEQ);
+      else if (b->op == "<") emit(Op::LT);
+      else if (b->op == ">") emit(Op::GT);
+      else if (b->op == "<=") emit(Op::LTE);
+      else if (b->op == ">=") emit(Op::GTE);
+      else { emit(Op::POP); emit(Op::POP); emitConst(PT_NIL); }
+      break;
+    }
+    case ExprType::Unary: {
+      auto* u = static_cast<Unary*>(expr);
+      compileExpr(u->right.get());
+      if (u->op == "-") emit(Op::NEG);
+      else if (u->op == "!" || u->op == "not") emit(Op::NOT);
+      break;
+    }
+    case ExprType::Assign: {
+      auto* a = static_cast<Assign*>(expr);
+      compileExpr(a->value.get());
+      int id = interner.intern(a->name);
+      int idx = resolveLocal(id);
+      if (idx >= 0) { emit(Op::STORE_LOCAL); emitU32(idx); }
+      else { emit(Op::STORE_VAR); emitU32(id); }
+      break;
+    }
+    case ExprType::Call: {
+      auto* c = static_cast<Call*>(expr);
+      compileExpr(c->callee.get());
+      for (auto& arg : c->arguments) compileExpr(arg.get());
+      emit(Op::CALL); emitU32((uint32_t)c->arguments.size());
+      break;
+    }
+    case ExprType::Grouping:
+      compileExpr(static_cast<Grouping*>(expr)->expression.get());
+      break;
+    case ExprType::PostfixExpr: {
+      auto* pe = static_cast<PostfixExpr*>(expr);
+      auto* v = static_cast<Variable*>(pe->operand.get());
+      int id = interner.intern(v->name);
+      int idx = resolveLocal(id);
+      if (idx >= 0) {
+        emit(Op::LOAD_LOCAL); emitU32(idx);
+        emit(Op::LOAD_LOCAL); emitU32(idx);
+      } else {
+        emit(Op::LOAD_VAR); emitU32(id);
+        emit(Op::LOAD_VAR); emitU32(id);
+      }
+      emitConst(PTValue(1.0));
+      if (pe->op == "++") emit(Op::ADD); else emit(Op::SUB);
+      if (idx >= 0) { emit(Op::STORE_LOCAL); emitU32(idx); }
+      else { emit(Op::STORE_VAR); emitU32(id); }
+      break;
+    }
+    case ExprType::TernaryExpr: {
+      auto* t = static_cast<TernaryExpr*>(expr);
+      compileExpr(t->condition.get());
+      size_t fp = chunk.code.size(); emit(Op::JMP_IF_FALSE); emitU32(0);
+      compileExpr(t->trueBranch.get());
+      size_t ep = chunk.code.size(); emit(Op::JMP); emitU32(0);
+      chunk.patchJump(fp);
+      compileExpr(t->falseBranch.get());
+      chunk.patchJump(ep);
+      break;
+    }
+    case ExprType::Logical: {
+      auto* l = static_cast<Logical*>(expr);
+      if (l->op == "or") {
+        compileExpr(l->left.get());
+        size_t p = chunk.code.size(); emit(Op::JMP_IF_TRUE); emitU32(0);
+        compileExpr(l->right.get()); chunk.patchJump(p);
+      } else {
+        compileExpr(l->left.get());
+        size_t p = chunk.code.size(); emit(Op::JMP_IF_FALSE); emitU32(0);
+        compileExpr(l->right.get()); chunk.patchJump(p);
+      }
+      break;
+    }
+    default:
+      emitConst(PT_NIL);
+      break;
+    }
+  }
+
+public:
+  explicit BytecodeCompiler(StringInterner& interner) : interner(interner) {}
+
+  BytecodeChunk compile(const std::vector<std::string>& params,
+                        const std::vector<int>& paramIds,
+                        const std::vector<std::unique_ptr<Stmt>>& body) {
+    for (size_t i = 0; i < params.size(); i++)
+      locals.push_back({paramIds[i], 0});
+    for (auto& stmt : body) compileStmt(*stmt);
+    emitConst(PT_NIL); emit(Op::RETURN);
+    return std::move(chunk);
+  }
+};
+
 void Interpreter::defineVar(int id, PTValue value) {
   env->set(id, std::move(value));
 }
@@ -75,6 +318,249 @@ bool Interpreter::varExists(int id) {
     e = e->enclosing;
   }
   return false;
+}
+
+bool Interpreter::canCompileBody(const std::vector<std::unique_ptr<Stmt>>& body) {
+  for (auto& stmt : body) {
+    switch (stmt->stype) {
+      case StmtType::Var: case StmtType::Expr: case StmtType::Return:
+      case StmtType::If: case StmtType::While: case StmtType::Block:
+      case StmtType::Break: case StmtType::Continue:
+        break;
+      default: return false;
+    }
+  }
+  for (auto& stmt : body) {
+    switch (stmt->stype) {
+      case StmtType::Var: {
+        auto& v = static_cast<VarStmt&>(*stmt);
+        if (v.initializer && v.initializer->type == ExprType::Call) return false;
+        break;
+      }
+      default: break;
+    }
+  }
+  return true;
+}
+
+std::shared_ptr<BytecodeChunk> Interpreter::compileFunction(
+    const std::vector<std::string>& params,
+    const std::vector<int>& paramIds,
+    const std::vector<std::unique_ptr<Stmt>>& body) {
+  BytecodeCompiler compiler(interner);
+  return std::make_shared<BytecodeChunk>(compiler.compile(params, paramIds, body));
+}
+
+static inline double toDouble(const PTValue& v) {
+  if (v.isNumber()) return v.numValue;
+  return std::stod(v.value);
+}
+
+PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& args) {
+  auto& chunk = *fn->bytecode;
+  PTValue stack[VM_MAX_STACK];
+  VMFrame frames[VM_MAX_FRAMES];
+  int sp = 0;
+  int frameCount = 0;
+  BytecodeChunk* curChunk = &chunk;
+  size_t ip = 0;
+
+  frames[0].chunk = &chunk;
+  frames[0].returnIp = 0;
+  frames[0].returnSp = 0;
+  frames[0].localStart = 0;
+  frameCount = 1;
+  sp = (int)args.size();
+
+  for (size_t i = 0; i < args.size(); i++)
+    stack[i] = args[i];
+
+  #define VM_READ_U32() curChunk->readU32(ip)
+  #define VM_READ_I32() curChunk->readI32(ip)
+
+  while (true) {
+    Op op = static_cast<Op>(curChunk->code[ip++]);
+
+    switch (op) {
+    case Op::LOAD_CONST:
+      stack[sp++] = curChunk->constants[VM_READ_U32()];
+      break;
+    case Op::LOAD_LOCAL: {
+      uint32_t idx = VM_READ_U32();
+      stack[sp++] = stack[frames[frameCount-1].localStart + idx];
+      break;
+    }
+    case Op::STORE_LOCAL: {
+      uint32_t idx = VM_READ_U32();
+      stack[frames[frameCount-1].localStart + idx] = stack[--sp];
+      break;
+    }
+    case Op::LOAD_VAR: {
+      uint32_t id = VM_READ_U32();
+      const PTValue* val = findVar(id);
+      stack[sp++] = val ? *val : PT_NIL;
+      break;
+    }
+    case Op::STORE_VAR: {
+      uint32_t id = VM_READ_U32();
+      assignVar(id, stack[--sp]);
+      break;
+    }
+    case Op::POP: sp--; break;
+    case Op::NEG: stack[sp-1].numValue = -stack[sp-1].numValue; break;
+    case Op::NOT: {
+      PTValue v = stack[--sp];
+      stack[sp++] = v.isBool() ? (v.boolValue ? PT_FALSE : PT_TRUE)
+                    : v.isNumber() ? (v.numValue == 0 ? PT_TRUE : PT_FALSE)
+                    : v.isNil() ? PT_TRUE
+                    : (v.value.empty() || v.value == "false" || v.value == "nil" || v.value == "0" ? PT_TRUE : PT_FALSE);
+      break;
+    }
+    case Op::ADD: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) a.numValue += b.numValue;
+      else a = PTValue(a.ensureStr() + b.ensureStr());
+      break;
+    }
+    case Op::SUB: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) a.numValue -= b.numValue;
+      else a = PTValue(toDouble(a) - toDouble(b));
+      break;
+    }
+    case Op::MUL: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) a.numValue *= b.numValue;
+      else a = PTValue(toDouble(a) * toDouble(b));
+      break;
+    }
+    case Op::DIV: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      double r = toDouble(b);
+      if (r == 0) throw PTRuntimeError("Division by zero");
+      if (a.isNumber() && b.isNumber()) a.numValue /= r;
+      else a = PTValue(toDouble(a) / r);
+      break;
+    }
+    case Op::MOD: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      double r = toDouble(b);
+      if (r == 0) throw PTRuntimeError("Modulo by zero");
+      a = PTValue(std::fmod(toDouble(a), r));
+      break;
+    }
+    case Op::EQ: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      bool eq;
+      if (a.isNumber() && b.isNumber()) eq = a.numValue == b.numValue;
+      else eq = isEqual(a, b);
+      stack[sp-1] = eq ? PT_TRUE : PT_FALSE;
+      break;
+    }
+    case Op::NEQ: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      bool eq;
+      if (a.isNumber() && b.isNumber()) eq = a.numValue == b.numValue;
+      else eq = isEqual(a, b);
+      stack[sp-1] = eq ? PT_FALSE : PT_TRUE;
+      break;
+    }
+    case Op::LT: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue < b.numValue ? PT_TRUE : PT_FALSE;
+      else stack[sp-1] = a.ensureStr() < b.ensureStr() ? PT_TRUE : PT_FALSE;
+      break;
+    }
+    case Op::GT: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue > b.numValue ? PT_TRUE : PT_FALSE;
+      else stack[sp-1] = a.ensureStr() > b.ensureStr() ? PT_TRUE : PT_FALSE;
+      break;
+    }
+    case Op::LTE: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue <= b.numValue ? PT_TRUE : PT_FALSE;
+      else stack[sp-1] = a.ensureStr() <= b.ensureStr() ? PT_TRUE : PT_FALSE;
+      break;
+    }
+    case Op::GTE: {
+      PTValue b = stack[--sp];
+      PTValue& a = stack[sp-1];
+      if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue >= b.numValue ? PT_TRUE : PT_FALSE;
+      else stack[sp-1] = a.ensureStr() >= b.ensureStr() ? PT_TRUE : PT_FALSE;
+      break;
+    }
+    case Op::JMP: {
+      int32_t offset = VM_READ_I32();
+      ip += offset;
+      break;
+    }
+    case Op::JMP_IF_FALSE: {
+      int32_t offset = VM_READ_I32();
+      PTValue v = stack[--sp];
+      if (!isTruthy(v)) ip += offset;
+      break;
+    }
+    case Op::JMP_IF_TRUE: {
+      int32_t offset = VM_READ_I32();
+      PTValue v = stack[--sp];
+      if (isTruthy(v)) ip += offset;
+      break;
+    }
+    case Op::CALL: {
+      uint32_t argc = VM_READ_U32();
+      PTValue callee = stack[sp - 1 - argc];
+
+      if (callee.isFunction() && callee.function->bytecode) {
+        auto& cfn = callee.function;
+        frames[frameCount].chunk = curChunk;
+        frames[frameCount].returnIp = ip;
+        frames[frameCount].returnSp = sp - 1 - argc;
+        frameCount++;
+        curChunk = cfn->bytecode.get();
+        ip = 0;
+        frames[frameCount-1].localStart = sp - argc;
+      } else if (callee.isFunction()) {
+        std::vector<PTValue> args(argc);
+        for (uint32_t i = 0; i < argc; i++)
+          args[i] = std::move(stack[sp - argc + i]);
+        sp = sp - 1 - argc;
+        stack[sp++] = evaluateFunction(callee, args);
+      } else {
+        sp = sp - 1 - argc;
+        stack[sp++] = PT_NIL;
+      }
+      break;
+    }
+    case Op::RETURN: {
+      PTValue result = stack[--sp];
+      if (frameCount == 1) {
+        #undef VM_READ_U32
+        #undef VM_READ_I32
+        return result;
+      }
+      frameCount--;
+      curChunk = frames[frameCount].chunk;
+      ip = frames[frameCount].returnIp;
+      sp = frames[frameCount].returnSp;
+      stack[sp++] = std::move(result);
+      break;
+    }
+    }
+  }
+  #undef VM_READ_U32
+  #undef VM_READ_I32
+  return PT_NIL;
 }
 
 void Interpreter::interpret(std::vector<std::unique_ptr<Stmt>>& stmts) {
@@ -129,10 +615,6 @@ std::string Interpreter::formatValue(const PTValue& val) {
   return val.value;
 }
 
-static inline double toDouble(const PTValue& v) {
-  if (v.isNumber()) return v.numValue;
-  return std::stod(v.value);
-}
 
 void Interpreter::execute(Stmt& stmt) {
   if (returning) return;
@@ -213,6 +695,9 @@ void Interpreter::execute(Stmt& stmt) {
     func->paramIds.resize(f.params.size());
     for (size_t i = 0; i < f.params.size(); i++)
       func->paramIds[i] = interner.intern(f.params[i]);
+    if (canCompileBody(f.body)) {
+      func->bytecode = compileFunction(func->params, func->paramIds, f.body);
+    }
     func->body = std::make_shared<std::vector<std::unique_ptr<Stmt>>>(std::move(f.body));
     func->closure = env;
     defineVar(internCached(f.name, f.id), PTValue(func));
@@ -805,6 +1290,15 @@ PTValue Interpreter::evaluate(Expr* expr) {
       size_t paramCount = fn->params.size();
       if (argCount != paramCount)
         throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
+      if (fn->bytecode) {
+        std::vector<PTValue> args(argCount);
+        for (size_t i = 0; i < argCount; i++) args[i] = evaluate(c->arguments[i].get());
+        auto savedEnv = env;
+        env = fn->closure;
+        PTValue result = execBytecode(fn.get(), args);
+        env = savedEnv;
+        return result;
+      }
       auto callEnv = acquireEnv(fn->closure);
       for (size_t i = 0; i < fn->params.size(); i++)
         callEnv->setNew(fn->paramIds[i], evaluate(c->arguments[i].get()));
@@ -862,6 +1356,15 @@ PTValue Interpreter::evaluate(Expr* expr) {
     size_t paramCount = fn->params.size();
     if (argCount != paramCount)
       throw PTRuntimeError("Expected " + std::to_string(paramCount) + " arguments but got " + std::to_string(argCount));
+    if (fn->bytecode) {
+      std::vector<PTValue> args(argCount);
+      for (size_t i = 0; i < argCount; i++) args[i] = evaluate(c->arguments[i].get());
+      auto savedEnv = env;
+      env = fn->closure;
+      PTValue result = execBytecode(fn.get(), args);
+      env = savedEnv;
+      return result;
+    }
     auto callEnv = acquireEnv(fn->closure);
     for (size_t i = 0; i < fn->params.size(); i++)
       callEnv->setNew(fn->paramIds[i], evaluate(c->arguments[i].get()));
@@ -940,6 +1443,13 @@ PTValue Interpreter::evaluateFunction(const PTValue& fnVal, const std::vector<PT
   auto& fn = fnVal.function;
   if (args.size() != fn->params.size())
     throw PTRuntimeError("Expected " + std::to_string(fn->params.size()) + " arguments but got " + std::to_string(args.size()));
+  if (fn->bytecode) {
+    auto savedEnv = env;
+    env = fn->closure;
+    PTValue result = execBytecode(fn.get(), args);
+    env = savedEnv;
+    return result;
+  }
   auto funcEnv = acquireEnv(fn->closure);
   for (size_t i = 0; i < fn->params.size(); i++)
     funcEnv->setNew(fn->paramIds[i], args[i]);

@@ -120,12 +120,57 @@ struct PTValue {
   }
 };
 
+enum class Op : uint8_t {
+  LOAD_CONST, LOAD_LOCAL, STORE_LOCAL,
+  LOAD_VAR, STORE_VAR,
+  POP,
+  ADD, SUB, MUL, DIV, MOD, NEG,
+  EQ, NEQ, LT, GT, LTE, GTE,
+  NOT,
+  JMP, JMP_IF_FALSE, JMP_IF_TRUE,
+  CALL, RETURN
+};
+
+struct BytecodeChunk {
+  std::vector<uint8_t> code;
+  std::vector<PTValue> constants;
+
+  void emitOp(Op op) { code.push_back(static_cast<uint8_t>(op)); }
+  void emitU32(uint32_t v) {
+    code.push_back(static_cast<uint8_t>(v));
+    code.push_back(static_cast<uint8_t>(v >> 8));
+    code.push_back(static_cast<uint8_t>(v >> 16));
+    code.push_back(static_cast<uint8_t>(v >> 24));
+  }
+  void emitI32(int32_t v) { emitU32(static_cast<uint32_t>(v)); }
+  uint32_t readU32(size_t& ip) const {
+    uint32_t v = static_cast<uint32_t>(code[ip])
+      | (static_cast<uint32_t>(code[ip+1]) << 8)
+      | (static_cast<uint32_t>(code[ip+2]) << 16)
+      | (static_cast<uint32_t>(code[ip+3]) << 24);
+    ip += 4; return v;
+  }
+  int32_t readI32(size_t& ip) const { return static_cast<int32_t>(readU32(ip)); }
+  int addConst(PTValue v) {
+    int idx = static_cast<int>(constants.size());
+    constants.push_back(std::move(v)); return idx;
+  }
+  void patchJump(size_t offset) {
+    int32_t dist = static_cast<int32_t>(code.size()) - static_cast<int32_t>(offset) - 5;
+    code[offset+1] = static_cast<uint8_t>(dist);
+    code[offset+2] = static_cast<uint8_t>(dist >> 8);
+    code[offset+3] = static_cast<uint8_t>(dist >> 16);
+    code[offset+4] = static_cast<uint8_t>(dist >> 24);
+  }
+};
+
 struct PTFunction {
   std::string name;
   std::vector<std::string> params;
   std::vector<int> paramIds;
   std::shared_ptr<std::vector<std::unique_ptr<Stmt>>> body;
   std::shared_ptr<class Environment> closure;
+  std::shared_ptr<BytecodeChunk> bytecode;
   bool isStatic = false;
   bool isInit = false;
 };
@@ -230,7 +275,23 @@ private:
 
   PTValue evaluate(Expr* expr);
   PTValue callBuiltin(const std::string& name, const std::vector<std::unique_ptr<Expr>>& args);
+  PTValue callBuiltinDirect(const std::string& name, const std::vector<PTValue>& args);
   std::string formatValue(const PTValue& val);
   bool isTruthy(const PTValue& val);
   bool isEqual(const PTValue& a, const PTValue& b);
+
+  struct VMFrame {
+    int localStart;
+    BytecodeChunk* chunk;
+    size_t returnIp;
+    int returnSp;
+  };
+  static const int VM_MAX_FRAMES = 256;
+  static const int VM_MAX_STACK = 4096;
+  PTValue execBytecode(PTFunction* fn, const std::vector<PTValue>& args = {});
+  std::shared_ptr<BytecodeChunk> compileFunction(
+    const std::vector<std::string>& params,
+    const std::vector<int>& paramIds,
+    const std::vector<std::unique_ptr<Stmt>>& body);
+  bool canCompileBody(const std::vector<std::unique_ptr<Stmt>>& body);
 };
