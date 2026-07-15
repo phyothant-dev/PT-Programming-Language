@@ -400,42 +400,50 @@ show("main continues immediately");
 sleep(2000);</code></pre>
 
       <h2 id="performance">Performance</h2>
-      <p>PT includes a bytecode VM with optimizations for numeric operations. Here's how it compares to other interpreted languages:</p>
+      <p>PT includes a bytecode VM with variable interning, environment pooling, and optimized opcodes. Here's how it compares to other interpreted languages:</p>
 
       <h3>Recursive Fibonacci — fib(30)</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
-        <tr><td>Node.js (V8)</td><td>0.008s</td></tr>
-        <tr><td>Python 3</td><td>0.051s</td></tr>
-        <tr><td>Ruby</td><td>0.050s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.212s</td></tr>
+        <tr><td>Node.js (V8)</td><td>0.005s</td></tr>
+        <tr><td>Python 3</td><td>0.053s</td></tr>
+        <tr><td>Ruby</td><td>0.047s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.207s</td></tr>
+      </table>
+
+      <h3>Loop Sum — 10M iterations</h3>
+      <table>
+        <tr><th>Language</th><th>Time</th></tr>
+        <tr><td>Node.js (V8)</td><td>0.009s</td></tr>
+        <tr><td>Python 3</td><td>0.075s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.601s</td></tr>
       </table>
 
       <h3>String Concatenation — 100K iterations</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
-        <tr><td>Python 3</td><td>0.125s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.38s</td></tr>
-        <tr><td>Ruby</td><td>0.225s</td></tr>
+        <tr><td>Python 3</td><td>0.117s</td></tr>
+        <tr><td>Ruby</td><td>0.218s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.241s</td></tr>
       </table>
 
       <h3>Array Push + Iterate — 100K items</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Python 3</td><td>0.002s</td></tr>
-        <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
+        <tr><td>Node.js (V8)</td><td>0.002s</td></tr>
         <tr><td>Ruby</td><td>0.003s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.039s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.023s</td></tr>
       </table>
 
       <h3>Optimization Results</h3>
       <table>
-        <tr><th>Benchmark</th><th>Before</th><th>After</th><th>Speedup</th></tr>
-        <tr><td>Loop 10M</td><td>20.31s</td><td>1.28s</td><td><strong>15.9x</strong></td></tr>
-        <tr><td>Array 100K</td><td>0.56s</td><td>0.039s</td><td><strong>14.4x</strong></td></tr>
-        <tr><td>String 100K</td><td>0.63s</td><td>0.38s</td><td><strong>1.7x</strong></td></tr>
-        <tr><td>fib(30)</td><td>28.48s</td><td>0.212s</td><td><strong>134x</strong></td></tr>
+        <tr><th>Benchmark</th><th>v1</th><th>v8</th><th>Speedup</th></tr>
+        <tr><td>Loop 10M</td><td>20.31s</td><td>0.601s</td><td><strong>33.8x</strong></td></tr>
+        <tr><td>Array 100K</td><td>0.56s</td><td>0.023s</td><td><strong>24.3x</strong></td></tr>
+        <tr><td>String 100K</td><td>0.63s</td><td>0.241s</td><td><strong>2.6x</strong></td></tr>
+        <tr><td>fib(30)</td><td>28.48s</td><td>0.207s</td><td><strong>137x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">

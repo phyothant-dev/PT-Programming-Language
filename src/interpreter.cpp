@@ -397,6 +397,17 @@ class BytecodeCompiler {
         emit(Op::STORE_LOCAL); emitU32(idx);
         emit(Op::LOAD_LOCAL); emitU32(idx);
       } else {
+        if (a->value->type == ExprType::Binary) {
+          auto* b = static_cast<Binary*>(a->value.get());
+          if (b->left->type == ExprType::Variable) {
+            auto* lv = static_cast<Variable*>(b->left.get());
+            if (lv->name == a->name && b->op == "+") {
+              compileExpr(b->right.get());
+              emit(Op::ADD_STORE_GLOBAL); emitU32(id);
+              break;
+            }
+          }
+        }
         compileExpr(a->value.get());
         emit(Op::STORE_VAR); emitU32(id);
         emit(Op::LOAD_VAR); emitU32(id);
@@ -405,6 +416,15 @@ class BytecodeCompiler {
     }
     case ExprType::Call: {
       auto* c = static_cast<Call*>(expr);
+      if (c->callee->type == ExprType::Variable && c->arguments.size() == 2) {
+        auto* v = static_cast<Variable*>(c->callee.get());
+        if (v->name == "push") {
+          compileExpr(c->arguments[0].get());
+          compileExpr(c->arguments[1].get());
+          emit(Op::PUSH_ARRAY);
+          break;
+        }
+      }
       compileExpr(c->callee.get());
       for (auto& arg : c->arguments) compileExpr(arg.get());
       emit(Op::CALL); emitU32((uint32_t)c->arguments.size());
@@ -422,11 +442,8 @@ class BytecodeCompiler {
         emit(pe->op == "++" ? Op::INC_LOCAL : Op::DEC_LOCAL);
         emitU32(idx);
       } else {
-        emit(Op::LOAD_VAR); emitU32(id);
-        emit(Op::LOAD_VAR); emitU32(id);
-        emitConst(PTValue(1.0));
-        emit(pe->op == "++" ? Op::ADD : Op::SUB);
-        emit(Op::STORE_VAR); emitU32(id);
+        emit(pe->op == "++" ? Op::INC_GLOBAL : Op::DEC_GLOBAL);
+        emitU32(id);
       }
       break;
     }
@@ -1111,6 +1128,74 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
         lhs = PTValue(formatValue(lhs) + formatValue(rhs));
       } else {
         lhs = PTValue(lhs.numValue + rhs.numValue);
+      }
+      break;
+    }
+    case Op::INC_GLOBAL: {
+      uint32_t id = VM_READ_U32();
+      auto e = env;
+      while (e) {
+        auto it = e->idxMap.find(id);
+        if (it != e->idxMap.end()) {
+          double old = e->values[it->second].second.numValue;
+          e->values[it->second].second.numValue = old + 1.0;
+          stack[sp++] = PTValue(old);
+          break;
+        }
+        e = e->enclosing;
+      }
+      break;
+    }
+    case Op::DEC_GLOBAL: {
+      uint32_t id = VM_READ_U32();
+      auto e = env;
+      while (e) {
+        auto it = e->idxMap.find(id);
+        if (it != e->idxMap.end()) {
+          double old = e->values[it->second].second.numValue;
+          e->values[it->second].second.numValue = old - 1.0;
+          stack[sp++] = PTValue(old);
+          break;
+        }
+        e = e->enclosing;
+      }
+      break;
+    }
+    case Op::ADD_STORE_GLOBAL: {
+      uint32_t id = VM_READ_U32();
+      PTValue rhs = std::move(stack[--sp]);
+      auto e = env;
+      while (e) {
+        auto it = e->idxMap.find(id);
+        if (it != e->idxMap.end()) {
+          PTValue& lhs = e->values[it->second].second;
+          if (lhs.isString() || rhs.isString()) {
+            lhs = PTValue(formatValue(lhs) + formatValue(rhs));
+          } else {
+            lhs = PTValue(lhs.numValue + rhs.numValue);
+          }
+          stack[sp++] = lhs;
+          break;
+        }
+        e = e->enclosing;
+      }
+      break;
+    }
+    case Op::PUSH_ARRAY: {
+      PTValue val = std::move(stack[--sp]);
+      PTValue& arr = stack[sp - 1];
+      if (arr.isArray()) {
+        arr.array->push_back(std::move(val));
+      }
+      break;
+    }
+    case Op::STRING_APPEND: {
+      PTValue rhs = std::move(stack[--sp]);
+      PTValue& lhs = stack[sp - 1];
+      if (lhs.isString()) {
+        lhs.value += formatValue(rhs);
+      } else {
+        lhs = PTValue(formatValue(lhs) + formatValue(rhs));
       }
       break;
     }

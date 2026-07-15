@@ -2,7 +2,7 @@
 
 Benchmark results comparing PT to other interpreted languages. All tests run on macOS (Apple Silicon) with default interpreter settings.
 
-> **Note:** PT is a tree-walk interpreter written in C++17. It's designed for simplicity and learning, not raw speed. Compiled languages like C, Go, or Rust would be orders of magnitude faster than all interpreters below.
+> **Note:** PT is a tree-walk interpreter + bytecode VM written in C++17. It's designed for simplicity and learning, not raw speed. Compiled languages like C, Go, or Rust would be orders of magnitude faster than all interpreters below.
 
 ## Benchmark Results
 
@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.005s | 42x faster |
-| **Python 3** | 0.051s | 4.1x faster |
-| **Ruby** | 0.049s | 4.3x faster |
-| **PT** | 0.212s | 1x |
+| **Node.js** (V8) | 0.005s | 41x faster |
+| **Python 3** | 0.053s | 3.9x faster |
+| **Ruby** | 0.047s | 4.3x faster |
+| **PT** | 0.207s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -24,9 +24,9 @@ Tests loop overhead and arithmetic.
 | Language | Time | Relative to PT |
 |----------|------|----------------|
 | **Ruby** | 0.000s | optimized `.sum` |
-| **Node.js** (V8) | 0.008s | 160x faster |
-| **Python 3** | 0.075s | 17x faster |
-| **PT** | 1.28s | 1x |
+| **Node.js** (V8) | 0.009s | 67x faster |
+| **Python 3** | 0.075s | 8x faster |
+| **PT** | 0.601s | 1x |
 
 ### String Concatenation — 100,000 iterations
 
@@ -34,10 +34,10 @@ Tests string allocation and memory handling.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.003s | 127x faster |
-| **Python 3** | 0.119s | **PT is 3.1x slower** |
-| **PT** | 0.38s | 1x |
-| **Ruby** | 0.221s | **PT is 1.7x faster** |
+| **Node.js** (V8) | 0.003s | 80x faster |
+| **Python 3** | 0.117s | 2.1x faster |
+| **PT** | 0.241s | 1x |
+| **Ruby** | 0.218s | **PT is 1.1x faster** |
 
 ### Array Push + Iterate — 100,000 items
 
@@ -45,28 +45,34 @@ Tests array allocation, push, and indexed access.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Python 3** | 0.002s | 19.5x faster |
-| **Ruby** | 0.003s | 13x faster |
-| **Node.js** (V8) | 0.002s | 19.5x faster |
-| **PT** | 0.039s | 1x |
+| **Python 3** | 0.002s | 11.5x faster |
+| **Node.js** (V8) | 0.002s | 11.5x faster |
+| **Ruby** | 0.003s | 7.7x faster |
+| **PT** | 0.023s | 1x |
 
 ## Summary Table
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.212s | 0.051s | 0.005s | 0.049s |
-| Loop 10M | 1.28s | 0.075s | 0.008s | ~0s |
-| String 100K | 0.38s | 0.119s | 0.003s | 0.221s |
-| Array 100K | 0.039s | 0.002s | 0.002s | 0.003s |
+| fib(30) | 0.207s | 0.053s | 0.005s | 0.047s |
+| Loop 10M | 0.601s | 0.075s | 0.009s | ~0s |
+| String 100K | 0.241s | 0.117s | 0.003s | 0.218s |
+| Array 100K | 0.023s | 0.002s | 0.002s | 0.003s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | After (v4) | After (v5) | After (v7) | Speedup (v1→v7) |
-|-----------|--------|-------|-------|-------|---------|
-| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | **15.9x** |
-| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | **14.4x** |
-| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | **1.7x** |
-| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | **134x** |
+| Benchmark | Before (v1) | v4 | v5 | v7 | v8 | Speedup (v1→v8) |
+|-----------|--------|-------|-------|-------|-------|---------|
+| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | 0.601s | **33.8x** |
+| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | 0.023s | **24.3x** |
+| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | 0.241s | **2.6x** |
+| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | 0.207s | **137x** |
+
+### What was optimized (v8)
+
+1. **INC_GLOBAL / DEC_GLOBAL opcodes** — `i++` and `i--` on global variables now use a single opcode (1 env lookup) instead of LOAD_VAR + LOAD_VAR + ADD/SUB + STORE_VAR (3 env lookups). **2.1x loop speedup.**
+2. **ADD_STORE_GLOBAL opcode** — `sum += i` on global variables compiles to LOAD_VAR + ADD_STORE_GLOBAL (2 env lookups) instead of LOAD_VAR + LOAD_VAR + ADD + STORE_VAR + LOAD_VAR (4 env lookups). Combined with INC_GLOBAL, the loop body went from 7 env lookups to 3.
+3. **PUSH_ARRAY opcode** — `push(arr, val)` now uses a dedicated opcode that directly appends to the vector, skipping the full CALL dispatch (no arg vector allocation, no builtin lookup). **1.7x array speedup.**
 
 ### What was optimized (v7)
 
@@ -106,13 +112,13 @@ Tests array allocation, push, and indexed access.
 
 ## Why is PT slower than Node.js?
 
-Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, inline caches, and register allocation. PT is a **tree-walk interpreter** that traverses the AST at runtime. This is an inherent architectural difference, not something we can close with micro-optimizations.
+Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, inline caches, and register allocation. PT is an interpreted language with a bytecode VM. This is an inherent architectural difference, not something we can close with micro-optimizations.
 
 ## Where PT is competitive
 
-- **Fibonacci** — PT is now within **4.1x of Python** and **4.3x of Ruby** for function-call-heavy workloads (down from 433x at v1).
-- **String operations** — PT's builtins (`replace`, `split`, `join`, `substr`) call C++ `std::string` directly. PT is **1.7x faster than Ruby** for string concatenation.
-- **Array operations** — `push`, `pop`, `len` use `std::vector` underneath.
+- **String operations** — PT is **1.1x faster than Ruby** for string concatenation.
+- **Array operations** — PT is within **7.7x of Ruby** and **11.5x of Python** for array push+iterate.
+- **Fibonacci** — PT is within **3.9x of Python** and **4.3x of Ruby** for function-call-heavy workloads (down from 433x at v1).
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.
 
 ## Design Philosophy
@@ -121,7 +127,7 @@ PT prioritizes:
 
 1. **Readability** — `show`, `let`, `fn`, `unless`, `match` are English-like
 2. **Simplicity** — single-pass lexing, no AST optimization passes
-3. **Learning** — easy to read the C++ source (~3300 lines)
+3. **Learning** — easy to read the C++ source (~3400 lines)
 4. **Safety** — no raw pointers, bounds checking on arrays
 
 Raw speed was never a goal. If you need performance-critical code, write that module in C++ and call it from PT's built-in functions.
