@@ -116,7 +116,7 @@
       "patterns": [
         {
           "name": "support.function.pt",
-          "match": "\\b(show|print|len|push|pop|toNum|toString|type|input|assert|clock|random|readFile|writeFile|fileExists|upper|lower|trim|substr|contains|replace|split|join|indexOf|abs|sqrt|min|max|floor|ceil|round|sort|range|map|filter|reduce|keys|values|has|sleep|httpListen|httpServe|sqliteOpen|sqliteExec|sqliteQuery|sqliteClose)\\b"
+          "match": "\\b(show|print|len|push|pop|toNum|toString|type|input|assert|clock|random|readFile|writeFile|fileExists|upper|lower|trim|substr|contains|replace|split|join|indexOf|abs|sqrt|min|max|floor|ceil|round|sort|range|map|filter|reduce|keys|values|has|sleep|httpListen|httpGet|httpPost|httpPut|httpDelete|sqliteOpen|sqliteExec|sqliteQuery|sqliteClose|pgOpen|pgExec|pgQuery|pgClose|parseJSON|toJSON|hash|base64Encode|base64Decode|uuid|spawn|getenv|exit)\\b"
         }
       ]
     },

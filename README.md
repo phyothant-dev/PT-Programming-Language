@@ -598,47 +598,46 @@ httpListen(3000, (req) => {
 
 ```
 PT-Programming-Language/
-├── pt                  # compiled binary
-├── Makefile            # build system
-├── install.sh          # one-line installer
-├── server.pt           # web demo server (localhost:3000)
-├── test.pt             # test suite (186 tests)
+├── pt                    # compiled binary
+├── Makefile              # build system
+├── install.sh            # one-line installer
+├── server.pt             # web demo server (localhost:3000)
+├── test.pt               # test suite (186 tests)
 ├── README.md
 ├── .gitignore
-├── docs/               # GitHub Pages website
-│   ├── index.html      # landing page
-│   ├── style.css       # dark theme CSS
-│   ├── docs.html       # language reference
-│   ├── playground.html # interactive examples
-│   ├── logo.svg        # project logo
-│   └── favicon.svg     # browser tab icon
+├── docs/                 # GitHub Pages website
+│   ├── index.html        # landing page
+│   ├── style.css         # dark theme CSS
+│   ├── docs.html         # language reference
+│   ├── playground.html   # interactive examples
+│   └── logo.svg          # project logo
 ├── src/
-│   ├── main.cpp        # entry point, REPL, file runner
-│   ├── token.h         # token type definitions
-│   ├── lexer.h/.cpp    # scanner — source → tokens
-│   ├── ast.h           # AST node definitions
-│   ├── parser.h/.cpp   # parser — tokens → AST
-│   ├── http.h/.cpp     # HTTP server (POSIX sockets)
-│   ├── interpreter.h/.cpp  # tree-walk interpreter + bytecode VM
-│   ├── json.h/.cpp     # JSON parser/serializer
-│   ├── ptcurl.h/.cpp   # HTTP client (libcurl)
-│   ├── crypto.h/.cpp   # SHA-256, MD5, Base64, UUID
-│   └── pg.h/.cpp       # PostgreSQL driver (optional)
-├── bench/              # performance benchmarks
-│   ├── bench.pt        # benchmark suite
-│   ├── COMPARISON.md   # language comparison
-│   ├── fib.py          # Python reference
-│   ├── fib.js          # Node.js reference
-│   └── fib.rb          # Ruby reference
-├── examples/           # example programs
-│   ├── fibonacci.pt
-│   ├── hello.pt
-│   ├── classes.pt
-│   ├── closures.pt
-│   ├── lists.pt
-│   ├── web.pt
-│   └── chat.pt
-└── vscode-pt/          # VS Code extension
+│   ├── main.cpp          # entry point, REPL, file runner
+│   ├── token.h           # token type definitions
+│   ├── lexer.h/.cpp      # scanner — source → tokens
+│   ├── ast.h             # AST node definitions
+│   ├── parser.h/.cpp     # parser — tokens → AST
+│   ├── http.h/.cpp       # HTTP server (POSIX sockets)
+│   ├── interpreter.h/.cpp# tree-walk interpreter + bytecode VM
+│   ├── json.h/.cpp       # JSON parser/serializer
+│   ├── ptcurl.h/.cpp     # HTTP client (libcurl)
+│   ├── crypto.h/.cpp     # SHA-256, MD5, Base64, UUID
+│   └── pg.h/.cpp         # PostgreSQL driver (optional)
+├── bench/                # performance benchmarks
+│   ├── COMPARISON.md     # language comparison
+│   ├── fib.pt            # recursive fibonacci
+│   ├── loop.pt           # loop sum 10M
+│   ├── string.pt         # string concat 100K
+│   ├── array.pt          # array push 100K
+│   └── *.py / *.js / *.rb  # reference implementations
+├── examples/             # example programs
+│   ├── api/              # REST API
+│   ├── blog/             # blog engine
+│   ├── chat/             # real-time chat
+│   ├── dashboard/        # dashboard app
+│   ├── portfolio/        # portfolio site
+│   └── todo/             # todo app
+└── vscode-pt/            # VS Code extension
 ```
 
 ---
@@ -661,14 +660,14 @@ Windows users can skip all requirements — just download the pre-built `.exe` f
 
 PT includes a bytecode VM with optimizations for numeric operations. Here's how it compares:
 
-| Benchmark | PT v7 | Python 3 | Ruby | Node.js |
+| Benchmark | PT v9 | Python 3 | Ruby | Node.js |
 |-----------|-------|----------|------|---------|
-| fib(30) recursive | **0.212s** | 0.051s | 0.050s | 0.008s |
-| Loop 10M | **1.28s** | 0.32s | 0.85s | 0.04s |
-| Array 100K | **0.039s** | 0.002s | 0.003s | 0.003s |
-| String 100K | **0.38s** | 0.125s | 0.225s | 0.003s |
+| fib(30) recursive | **0.21s** | 0.053s | 0.047s | 0.005s |
+| Loop 10M | **0.605s** | 0.075s | ~0s | 0.009s |
+| Array 100K | **0.023s** | 0.002s | 0.003s | 0.002s |
+| String 100K | **0.137s** | 0.117s | 0.218s | 0.003s |
 
-PT is **2.4x faster** than v1 for recursive workloads and **13x faster** for simple loops. Full benchmark details in [bench/COMPARISON.md](bench/COMPARISON.md).
+PT is **136x faster** than v1 for recursive workloads, **33.6x faster** for loops, and **4.6x faster** for string operations. PT is now only 1.2x slower than Python for string concatenation. Full benchmark details in [bench/COMPARISON.md](bench/COMPARISON.md).
 
 ---
 

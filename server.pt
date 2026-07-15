@@ -51,8 +51,8 @@ httpListen(port, (req) => {
   if (path is "/api/stats") {
     let stats = {
       language: "PT",
-      version: "1.0",
-      features: {"classes": true, "match": true, "httpServer": true, "listComprehension": true},
+      version: "v9",
+      features: {"classes": true, "match": true, "httpServer": true, "database": true, "closures": true, "bytecode": true},
       uptime: toString(clock())
     };
     return {status: 200, headers: {"content-type": "application/json"}, body: toString(stats)};

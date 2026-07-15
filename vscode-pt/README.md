@@ -8,7 +8,7 @@ Syntax highlighting, snippets, and one-click run for the PT programming language
 - **20+ code snippets** — type a prefix and press Tab
 - **Run command** — execute `.pt` files with `Ctrl+Alt+R`
 - **SQLite builtins** — `sqliteOpen`, `sqliteExec`, `sqliteQuery`, `sqliteClose`
-- **HTTP server builtins** — `httpListen`, `httpServe`
+- **HTTP builtins** — `httpListen`, `httpGet`, `httpPost`, `httpPut`, `httpDelete`
 - **String interpolation** — `${expr}` highlighted inside strings
 
 ## Install
@@ -55,7 +55,7 @@ Output appears in the "PT" output panel.
 | `foreach` | `for (x in arr) { }` |
 | `while` | `while () { }` |
 | `loop` | `loop { }` |
-| `repeat` | `repeat (N) { }` |
+| `repeat` | `repeat N { }` |
 | `match` | `let x = match(val) { }` |
 | `try` | `try { } catch (e) { }` |
 | `tryf` | `try { } catch (e) { } finally { }` |
