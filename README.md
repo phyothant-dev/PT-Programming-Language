@@ -166,13 +166,25 @@ return "<h1>Hello!</h1>";
 return {status: 200, headers: {"content-type": "application/json"}, body: toJSON({key: "value"})};
 ```
 
-### Deploy with Docker
-
-The project includes a Dockerfile for containerized deployment:
+### Deploy with systemd (Linux)
 
 ```sh
-docker build -t pt-server .
-docker run -p 3000:3000 pt-server
+# Create service file
+sudo tee /etc/systemd/system/pt-server.service <<EOF
+[Unit]
+Description=PT Web Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/pt /path/to/server.pt
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable pt-server
+sudo systemctl start pt-server
 ```
 
 ---
@@ -588,31 +600,45 @@ httpListen(3000, (req) => {
 PT-Programming-Language/
 ├── pt                  # compiled binary
 ├── Makefile            # build system
-├── Dockerfile          # Docker build for deployment
 ├── install.sh          # one-line installer
-├── web.pt              # web demo entry point
-├── server.pt           # production web server
+├── server.pt           # web demo server (localhost:3000)
 ├── test.pt             # test suite (186 tests)
 ├── README.md
 ├── .gitignore
-├── demo/               # website files
+├── docs/               # GitHub Pages website
 │   ├── index.html      # landing page
 │   ├── style.css       # dark theme CSS
 │   ├── docs.html       # language reference
 │   ├── playground.html # interactive examples
-│   └── 404.html        # error page
-└── src/
-    ├── main.cpp        # entry point, REPL, file runner
-    ├── token.h         # token type definitions
-    ├── lexer.h/.cpp    # scanner — source → tokens
-    ├── ast.h           # AST node definitions
-    ├── parser.h/.cpp   # parser — tokens → AST
-    ├── http.h/.cpp     # HTTP server (POSIX sockets)
-    ├── interpreter.h/.cpp  # tree-walk interpreter
-    ├── json.h/.cpp     # JSON parser/serializer
-    ├── ptcurl.h/.cpp   # HTTP client (libcurl)
-    ├── crypto.h/.cpp   # SHA-256, MD5, Base64, UUID
-    └── pg.h/.cpp       # PostgreSQL driver (optional)
+│   ├── logo.svg        # project logo
+│   └── favicon.svg     # browser tab icon
+├── src/
+│   ├── main.cpp        # entry point, REPL, file runner
+│   ├── token.h         # token type definitions
+│   ├── lexer.h/.cpp    # scanner — source → tokens
+│   ├── ast.h           # AST node definitions
+│   ├── parser.h/.cpp   # parser — tokens → AST
+│   ├── http.h/.cpp     # HTTP server (POSIX sockets)
+│   ├── interpreter.h/.cpp  # tree-walk interpreter + bytecode VM
+│   ├── json.h/.cpp     # JSON parser/serializer
+│   ├── ptcurl.h/.cpp   # HTTP client (libcurl)
+│   ├── crypto.h/.cpp   # SHA-256, MD5, Base64, UUID
+│   └── pg.h/.cpp       # PostgreSQL driver (optional)
+├── bench/              # performance benchmarks
+│   ├── bench.pt        # benchmark suite
+│   ├── COMPARISON.md   # language comparison
+│   ├── fib.py          # Python reference
+│   ├── fib.js          # Node.js reference
+│   └── fib.rb          # Ruby reference
+├── examples/           # example programs
+│   ├── fibonacci.pt
+│   ├── hello.pt
+│   ├── classes.pt
+│   ├── closures.pt
+│   ├── lists.pt
+│   ├── web.pt
+│   └── chat.pt
+└── vscode-pt/          # VS Code extension
 ```
 
 ---
@@ -622,11 +648,27 @@ PT-Programming-Language/
 - **C++17 compiler** — g++ 7+ or clang++ 5+
 - **Git** — to clone the repository
 - **libcurl** — for HTTP client (`httpGet`, `httpPost`, etc.)
+- **libsqlite3** — for SQLite database support
 - **libpq** (optional) — for PostgreSQL support, build with `make pg`
 
 No other dependencies. No package managers. No runtime required.
 
 Windows users can skip all requirements — just download the pre-built `.exe` from [Releases](https://github.com/phyothant-dev/PT-Programming-Language/releases).
+
+---
+
+## Performance
+
+PT includes a bytecode VM with optimizations for numeric operations. Here's how it compares:
+
+| Benchmark | PT v7 | Python 3 | Ruby | Node.js |
+|-----------|-------|----------|------|---------|
+| fib(30) recursive | **0.212s** | 0.051s | 0.050s | 0.008s |
+| Loop 10M | **1.28s** | 0.32s | 0.85s | 0.04s |
+| Array 100K | **0.039s** | 0.002s | 0.003s | 0.003s |
+| String 100K | **0.38s** | 0.125s | 0.225s | 0.003s |
+
+PT is **2.4x faster** than v1 for recursive workloads and **13x faster** for simple loops. Full benchmark details in [bench/COMPARISON.md](bench/COMPARISON.md).
 
 ---
 

@@ -400,7 +400,7 @@ show("main continues immediately");
 sleep(2000);</code></pre>
 
       <h2 id="performance">Performance</h2>
-      <p>PT is a tree-walk interpreter designed for readability and learning, not raw speed. Here's how it compares to other interpreted languages on common benchmarks:</p>
+      <p>PT includes a bytecode VM with optimizations for numeric operations. Here's how it compares to other interpreted languages:</p>
 
       <h3>Recursive Fibonacci — fib(30)</h3>
       <table>
@@ -408,7 +408,7 @@ sleep(2000);</code></pre>
         <tr><td>Node.js (V8)</td><td>0.008s</td></tr>
         <tr><td>Python 3</td><td>0.051s</td></tr>
         <tr><td>Ruby</td><td>0.050s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.67s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.212s</td></tr>
       </table>
 
       <h3>String Concatenation — 100K iterations</h3>
@@ -416,7 +416,7 @@ sleep(2000);</code></pre>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
         <tr><td>Python 3</td><td>0.125s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.35s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.38s</td></tr>
         <tr><td>Ruby</td><td>0.225s</td></tr>
       </table>
 
@@ -432,14 +432,14 @@ sleep(2000);</code></pre>
       <h3>Optimization Results</h3>
       <table>
         <tr><th>Benchmark</th><th>Before</th><th>After</th><th>Speedup</th></tr>
-        <tr><td>Loop 10M</td><td>20.31s</td><td>1.46s</td><td><strong>13.9x</strong></td></tr>
+        <tr><td>Loop 10M</td><td>20.31s</td><td>1.28s</td><td><strong>15.9x</strong></td></tr>
         <tr><td>Array 100K</td><td>0.56s</td><td>0.039s</td><td><strong>14.4x</strong></td></tr>
-        <tr><td>String 100K</td><td>0.63s</td><td>0.35s</td><td><strong>1.8x</strong></td></tr>
-        <tr><td>fib(30)</td><td>28.48s</td><td>0.67s</td><td><strong>42.5x</strong></td></tr>
+        <tr><td>String 100K</td><td>0.63s</td><td>0.38s</td><td><strong>1.7x</strong></td></tr>
+        <tr><td>fib(30)</td><td>28.48s</td><td>0.212s</td><td><strong>134x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">
-        PT is faster than Ruby for string operations and within 13x of Python for recursive workloads. For I/O-bound tasks (HTTP, file I/O, SQLite), PT performs well since system calls dominate over interpreter overhead.
+        PT uses a register-based bytecode VM with variable interning, environment pooling, and optimized opcodes for common patterns like <code>i++</code> and <code>sum += i</code>.
         Full benchmark details: <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/bench" target="_blank">bench/</a>
       </p>
     </div>

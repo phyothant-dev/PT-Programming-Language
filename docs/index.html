@@ -265,6 +265,34 @@
     </div>
   </section>
 
+  <section class="features" style="padding-top: 2rem; background: var(--bg2); border-radius: 16px; margin: 0 2rem;">
+    <h2>Performance</h2>
+    <p style="color: var(--text-dim); margin-bottom: 2rem;">PT includes a bytecode VM with optimizations. Here's how it compares:</p>
+    <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="feature-card">
+        <h3>Recursive Fibonacci</h3>
+        <p style="font-size: 2rem; color: var(--gold); font-weight: 700;">0.212s</p>
+        <p>vs Python 0.051s, Ruby 0.050s</p>
+      </div>
+      <div class="feature-card">
+        <h3>Loop 10M iterations</h3>
+        <p style="font-size: 2rem; color: var(--gold); font-weight: 700;">1.28s</p>
+        <p>15.9x faster than v1</p>
+      </div>
+      <div class="feature-card">
+        <h3>Array 100K items</h3>
+        <p style="font-size: 2rem; color: var(--gold); font-weight: 700;">0.039s</p>
+        <p>14.4x faster than v1</p>
+      </div>
+      <div class="feature-card">
+        <h3>String 100K</h3>
+        <p style="font-size: 2rem; color: var(--gold); font-weight: 700;">0.38s</p>
+        <p>1.7x faster than v1</p>
+      </div>
+    </div>
+    <p style="color: var(--text-dim); margin-top: 2rem; font-size: 0.9rem;">Full benchmarks: <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/bench" target="_blank" style="color: var(--accent);">bench/COMPARISON.md</a></p>
+  </section>
+
   <footer>
     <p>Built with PT Programming Language &mdash; <a href="https://github.com/phyothant-dev/PT-Programming-Language" target="_blank">View on GitHub</a></p>
   </footer>

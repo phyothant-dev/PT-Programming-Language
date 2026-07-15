@@ -2,10 +2,10 @@
 // Run locally: ./pt server.pt
 // Open: http://localhost:3000
 
-let homePage = readFile("demo/index.html");
-let docsPage = readFile("demo/docs.html");
-let playgroundPage = readFile("demo/playground.html");
-let styleCSS = readFile("demo/style.css");
+let homePage = readFile("docs/index.html");
+let docsPage = readFile("docs/docs.html");
+let playgroundPage = readFile("docs/playground.html");
+let styleCSS = readFile("docs/style.css");
 
 show("Loading pages...");
 if (homePage is nil) { show("ERROR: Could not load index.html"); return; }
@@ -67,5 +67,5 @@ httpListen(port, (req) => {
   }
 
   // --- 404 ---
-  return {status: 404, body: readFile("demo/404.html")};
+  return {status: 404, body: "<h1>404 - Not Found</h1><p>Page not found.</p><a href='/'>Home</a>"};
 });
