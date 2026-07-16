@@ -114,10 +114,14 @@
       width: 48px; height: 48px;
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: 'Fira Code', 'SF Mono', monospace;
       margin-bottom: 1rem;
       background: rgba(108,92,231,0.12);
       border: 1px solid rgba(108,92,231,0.2);
+      color: var(--accent2);
+      letter-spacing: -0.02em;
     }
     .bento-span-2 { grid-column: span 2; }
 
@@ -240,62 +244,62 @@
     <p style="color: var(--text-dim); margin-bottom: 3rem; font-size: 1.1rem;">Everything you need, nothing you don't.</p>
     <div class="bento-grid">
       <div class="bento-card bento-span-2 animate-on-scroll">
-        <div class="bento-icon">{ }</div>
+        <div class="bento-icon">PT</div>
         <h3>Unique Syntax</h3>
         <p>No more <code>print()</code> &mdash; use <code>show()</code>. No <code>==</code> &mdash; use <code>is</code>. <code>unless</code> instead of <code>if not</code>. PT has its own identity that reads like English.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#9889;</div>
+        <div class="bento-icon">VM</div>
         <h3>Bytecode VM</h3>
         <p>Register-based bytecode with computed goto dispatch. 168x faster than v1.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#9881;</div>
+        <div class="bento-icon">01</div>
         <h3>Zero Setup</h3>
         <p>Single binary. No packages, no npm, no build step. Just <code>./pt server.pt</code>.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#127760;</div>
+        <div class="bento-icon">:3000</div>
         <h3>Built-in HTTP Server</h3>
         <p>One line to start a web server. <code>httpListen(3000, handler)</code> and you're live. Route matching, request/response objects included.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#128269;</div>
+        <div class="bento-icon">GET</div>
         <h3>HTTP Client</h3>
         <p><code>httpGet</code>, <code>httpPost</code>, <code>httpPut</code>, <code>httpDelete</code> built-in. Call any API without external libraries.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#128193;</div>
+        <div class="bento-icon">R/W</div>
         <h3>File I/O</h3>
         <p>Read and write files with <code>readFile()</code> and <code>writeFile()</code>. Check existence with <code>fileExists()</code>.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#127912;</div>
+        <div class="bento-icon">=&gt;</div>
         <h3>Pattern Matching</h3>
         <p>Powerful <code>match</code> expressions with <code>=></code> syntax for clean, readable branching. Wildcards, guards, destructuring.</p>
       </div>
       <div class="bento-card bento-span-2 animate-on-scroll">
-        <div class="bento-icon">&#128218;</div>
+        <div class="bento-icon">class</div>
         <h3>Classes & OOP</h3>
         <p>Full OOP with classes, inheritance, <code>this</code>, <code>super</code>, static methods, constructors, and method overriding. Encapsulation done right.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#128230;</div>
+        <div class="bento-icon">SQL</div>
         <h3>SQLite Built-in</h3>
-        <p><code>pgOpen</code>, <code>pgQuery</code>, <code>pgExec</code> &mdash; database access without any drivers. Zero configuration.</p>
+        <p><code>sqliteOpen</code>, <code>sqliteQuery</code>, <code>sqliteExec</code> &mdash; database access without any drivers. Zero configuration.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#128273;</div>
+        <div class="bento-icon">sha</div>
         <h3>Crypto</h3>
-        <p><code>md5()</code>, <code>sha256()</code>, <code>base64Encode()</code>, <code>base64Decode()</code>, <code>uuid()</code> built-in. No external deps.</p>
+        <p><code>hash()</code>, <code>base64Encode()</code>, <code>base64Decode()</code>, <code>uuid()</code> built-in. No external deps.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#128101;</div>
+        <div class="bento-icon">thr</div>
         <h3>Concurrency</h3>
         <p><code>spawn()</code> runs functions in background threads. <code>sleep()</code> for timing. Non-blocking by design.</p>
       </div>
       <div class="bento-card animate-on-scroll">
-        <div class="bento-icon">&#128279;</div>
+        <div class="bento-icon">( )</div>
         <h3>Closures</h3>
         <p>Functions capture their enclosing scope. Lexical scoping with mutable state. First-class functions.</p>
       </div>
@@ -363,7 +367,7 @@
     </div>
   </section>
 
-  <section class="demo-section" style="background: var(--bg2); border-radius: 20px; margin: 0 2rem;">
+  <section class="demo-section" style="background: var(--bg2); border-radius: 20px; max-width: 1200px; margin: 0 auto;">
     <h2>Quick Example</h2>
     <div class="code-window" style="max-width: 700px; margin: 0 auto; text-align: left;">
       <div class="code-bar">

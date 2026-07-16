@@ -580,31 +580,6 @@ nav::after {
   line-height: 1.5;
 }
 
-/* TABLES */
-.docs-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1rem 0;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.docs-content th, .docs-content td {
-  padding: 0.8rem 1.2rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-.docs-content th {
-  color: var(--accent2);
-  font-weight: 600;
-  background: var(--bg3);
-}
-.docs-content td:last-child {
-  text-align: right;
-  font-family: 'Fira Code', monospace;
-}
-
 /* FOOTER */
 footer {
   padding: 3rem;
@@ -638,11 +613,24 @@ footer::before {
   transform: translateY(0);
 }
 
-.animate-on-scroll:nth-child(2) { transition-delay: 0.1s; }
-.animate-on-scroll:nth-child(3) { transition-delay: 0.2s; }
-.animate-on-scroll:nth-child(4) { transition-delay: 0.3s; }
-.animate-on-scroll:nth-child(5) { transition-delay: 0.4s; }
-.animate-on-scroll:nth-child(6) { transition-delay: 0.5s; }
+.animate-on-scroll:nth-child(1) { transition-delay: 0s; }
+.animate-on-scroll:nth-child(2) { transition-delay: 0.08s; }
+.animate-on-scroll:nth-child(3) { transition-delay: 0.16s; }
+.animate-on-scroll:nth-child(4) { transition-delay: 0.24s; }
+.animate-on-scroll:nth-child(5) { transition-delay: 0.32s; }
+.animate-on-scroll:nth-child(6) { transition-delay: 0.4s; }
+.animate-on-scroll:nth-child(7) { transition-delay: 0.48s; }
+.animate-on-scroll:nth-child(8) { transition-delay: 0.56s; }
+.animate-on-scroll:nth-child(9) { transition-delay: 0.64s; }
+.animate-on-scroll:nth-child(10) { transition-delay: 0.72s; }
+.animate-on-scroll:nth-child(11) { transition-delay: 0.8s; }
+.animate-on-scroll:nth-child(12) { transition-delay: 0.88s; }
+
+/* COUNTING ANIMATION */
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
