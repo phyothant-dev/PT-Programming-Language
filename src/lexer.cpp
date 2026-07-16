@@ -21,7 +21,7 @@ static const std::unordered_map<std::string, TokenType> keywords = {
   {"const", TokenType::CONST},
   {"elif", TokenType::ELIF}, {"repeat", TokenType::REPEAT},
   {"match", TokenType::MATCH},
-  {"class", TokenType::CLASS}, {"struct", TokenType::STRUCT},
+  {"class", TokenType::CLASS},
   {"enum", TokenType::ENUM}, {"super", TokenType::SUPER},
   {"this", TokenType::THIS},
   {"static", TokenType::STATIC},

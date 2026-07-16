@@ -225,7 +225,6 @@ sudo systemctl start pt-server
 ### Functions & Lambdas
 
 - **Functions** — `fn name(params) { ... }` with `return`
-- **Default params** — `fn greet(name = "World") { ... }`
 - **Arrow functions** — `fn name(params) => expression;` or inline `(x) => x * 2`
 - **Closures** — functions capture enclosing scope, mutable state
 - **Recursion** — fully supported

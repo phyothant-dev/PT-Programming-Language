@@ -32,7 +32,7 @@ void runFile(const std::string& path) {
 }
 
 void repl() {
-  std::cout << "PT v0.1 - Type your code (exit to quit)" << std::endl;
+  std::cout << "PT v12 - Type your code (exit to quit)" << std::endl;
   Interpreter interpreter;
   interpreter.replMode = true;
   std::vector<std::unique_ptr<Stmt>> empty;

@@ -2270,13 +2270,11 @@ PTValue Interpreter::evaluate(Expr* expr) {
         if (!left.isNumber() && !right.isNumber())
           return PTValue(std::stod(left.value) * std::stod(right.value));
       }
-      std::cerr << "[TREEWALK MUL FALLBACK] left.type=" << (int)left.type << " right.type=" << (int)right.type << std::endl;
       return PTValue(left.numValue * right.numValue);
     }
 
     if (left.isArray() || left.isMap()) throw PTRuntimeError("Cannot use arithmetic on arrays or maps");
     if (right.isArray() || right.isMap()) throw PTRuntimeError("Cannot use arithmetic on arrays or maps");
-    std::cerr << "[TREEWALK BINARY] op=" << b->op << " left.type=" << (int)left.type << " right.type=" << (int)right.type << std::endl;
     double l = toDouble(left), r = toDouble(right);
     if (b->op == "-") return PTValue(l - r);
     if (b->op == "/") { if (r == 0) throw PTRuntimeError("Division by zero"); return PTValue(l / r); }
@@ -2699,7 +2697,6 @@ bool Interpreter::isTruthy(const PTValue& val) {
 
 bool Interpreter::isEqual(const PTValue& a, const PTValue& b) {
   if (a.type != b.type) {
-    if (a.isNumber() && b.isNumber()) return a.numValue == b.numValue;
     if ((a.isNumber() || b.isNumber()) && (a.isString() || b.isString()))
       return a.ensureStr() == b.ensureStr();
     return false;
