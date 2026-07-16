@@ -9,18 +9,18 @@
   <style>
     .docs-layout { display: flex; max-width: 1200px; margin: 4rem auto; padding: 0 2rem; gap: 3rem; }
     .docs-nav { width: 220px; flex-shrink: 0; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto; }
-    .docs-nav h3 { color: var(--gold); margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
-    .docs-nav a { display: block; padding: 0.4rem 0; color: var(--text-dim); font-size: 0.9rem; }
-    .docs-nav a:hover { color: var(--accent); text-decoration: none; }
+    .docs-nav h3 { color: var(--accent2); margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+    .docs-nav a { display: block; padding: 0.4rem 0; color: var(--text-dim); font-size: 0.9rem; transition: color 0.3s, padding-left 0.3s; }
+    .docs-nav a:hover { color: var(--accent2); padding-left: 0.3rem; text-decoration: none; }
     .docs-content { flex: 1; min-width: 0; }
-    .docs-content h2 { font-size: 1.8rem; margin: 3rem 0 1rem; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; scroll-margin-top: 100px; }
+    .docs-content h2 { font-size: 1.8rem; margin: 3rem 0 1rem; color: var(--accent2); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; scroll-margin-top: 100px; }
     .docs-content h3 { font-size: 1.2rem; margin: 2rem 0 0.5rem; color: var(--blue); }
     .docs-content p { margin-bottom: 1rem; color: var(--text-dim); }
-    .docs-content pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; margin: 1rem 0 1.5rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; }
-    .docs-content pre code { background: none; padding: 0; }
+    .docs-content pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; margin: 1rem 0 1.5rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; }
+    .docs-content pre code { background: none; padding: 0; border: none; }
     table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
     th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--gold); font-weight: 600; }
+    th { color: var(--accent2); font-weight: 600; }
     td { color: var(--text-dim); }
     td code { font-size: 0.85rem; }
     @media (max-width: 768px) { .docs-layout { flex-direction: column; } .docs-nav { width: 100%; position: static; } }
