@@ -51,7 +51,7 @@ httpListen(port, (req) => {
   if (path is "/api/stats") {
     let stats = {
       language: "PT",
-      version: "v10",
+      version: "v11",
       features: {"classes": true, "match": true, "httpServer": true, "database": true, "closures": true, "bytecode": true},
       uptime: toString(clock())
     };

@@ -406,48 +406,49 @@ sleep(2000);</code></pre>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.005s</td></tr>
-        <tr><td>Python 3</td><td>0.053s</td></tr>
-        <tr><td>Ruby</td><td>0.047s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.207s</td></tr>
+        <tr><td>Python 3</td><td>0.052s</td></tr>
+        <tr><td>Ruby</td><td>0.049s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.202s</td></tr>
       </table>
 
       <h3>Loop Sum — 10M iterations</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.009s</td></tr>
-        <tr><td>Python 3</td><td>0.075s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.491s</td></tr>
+        <tr><td>Ruby</td><td>0.204s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.407s</td></tr>
+        <tr><td>Python 3</td><td>0.461s</td></tr>
       </table>
 
       <h3>String Concatenation — 100K iterations</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
-        <tr><td>Python 3</td><td>0.117s</td></tr>
-        <tr><td>Ruby</td><td>0.218s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.005s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.004s</td></tr>
+        <tr><td>Python 3</td><td>0.127s</td></tr>
+        <tr><td>Ruby</td><td>0.244s</td></tr>
       </table>
 
       <h3>Array Push + Iterate — 100K items</h3>
       <table>
         <tr><th>Language</th><th>Time</th></tr>
-        <tr><td>Python 3</td><td>0.002s</td></tr>
+        <tr><td>Ruby</td><td>0.002s</td></tr>
+        <tr><td>Python 3</td><td>0.003s</td></tr>
         <tr><td>Node.js (V8)</td><td>0.002s</td></tr>
-        <tr><td>Ruby</td><td>0.003s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.023s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.016s</td></tr>
       </table>
 
       <h3>Optimization Results</h3>
       <table>
-        <tr><th>Benchmark</th><th>v1</th><th>v10</th><th>Speedup</th></tr>
-        <tr><td>Loop 10M</td><td>20.31s</td><td>0.491s</td><td><strong>41.4x</strong></td></tr>
-        <tr><td>Array 100K</td><td>0.56s</td><td>0.018s</td><td><strong>31.1x</strong></td></tr>
-        <tr><td>String 100K</td><td>0.63s</td><td>0.005s</td><td><strong>126x</strong></td></tr>
-        <tr><td>fib(30)</td><td>28.48s</td><td>0.22s</td><td><strong>129x</strong></td></tr>
+        <tr><th>Benchmark</th><th>v1</th><th>v11</th><th>Speedup</th></tr>
+        <tr><td>Loop 10M</td><td>20.31s</td><td>0.407s</td><td><strong>50x</strong></td></tr>
+        <tr><td>Array 100K</td><td>0.56s</td><td>0.016s</td><td><strong>35x</strong></td></tr>
+        <tr><td>String 100K</td><td>0.63s</td><td>0.004s</td><td><strong>158x</strong></td></tr>
+        <tr><td>fib(30)</td><td>28.48s</td><td>0.202s</td><td><strong>141x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">
-        PT uses a register-based bytecode VM with variable interning, environment pooling, and optimized opcodes for common patterns like <code>i++</code> and <code>sum += i</code>.
+        PT uses a register-based bytecode VM with computed goto dispatch, variable interning, environment pooling, and optimized opcodes for common patterns like <code>i++</code> and <code>sum += i</code>.
         Full benchmark details: <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/bench" target="_blank">bench/</a>
       </p>
     </div>
