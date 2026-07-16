@@ -1,0 +1,61 @@
+{
+  "name": "pt-language",
+  "displayName": "PT Programming Language",
+  "description": "Syntax highlighting and runner for the PT programming language",
+  "version": "0.4.0",
+  "publisher": "phyothant-dev",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "pt",
+        "aliases": ["PT", "pt"],
+        "extensions": [".pt"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pt",
+        "scopeName": "source.pt",
+        "path": "./syntaxes/pt.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "pt",
+        "path": "./snippets/pt.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "pt.run",
+        "title": "PT: Run File"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "pt.run",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r"
+      }
+    ],
+    "configuration": {
+      "title": "PT Language",
+      "properties": {
+        "pt.executablePath": {
+          "type": "string",
+          "default": "pt",
+          "description": "Path to the pt executable"
+        }
+      }
+    }
+  }
+}

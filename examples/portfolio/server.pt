@@ -1,0 +1,27 @@
+let template = readFile("templates/portfolio.html");
+
+let projectNames = ["PT Language", "Web Server", "CLI Tool"];
+let projectDescs = ["A programming language in C++17", "Built-in HTTP server", "Interactive REPL and file runner"];
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/") {
+    let projectList = "";
+    let i = 0;
+    while (i < len(projectNames)) {
+      projectList = projectList + "<div class='project'><h3>" + projectNames[i] + "</h3><p>" + projectDescs[i] + "</p></div>";
+      i++;
+    }
+    let page = replace(template, "{{PROJECTS}}", projectList);
+    page = replace(page, "{{NAME}}", "Phyo Thant");
+    page = replace(page, "{{BIO}}", "Building PT Programming Language");
+    return page;
+  }
+
+  if (req.path is "/api/contact") {
+    return "{\"status\": \"success\", \"message\": \"Message received!\"}";
+  }
+
+  return {status: 404, body: "<h1>404</h1>"};
+});

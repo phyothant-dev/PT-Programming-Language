@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; padding: 2rem; }
+    h1 { font-size: 1.8rem; margin-bottom: 2rem; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat { background: #12121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .stat .value { font-size: 2rem; font-weight: 800; color: #ffc371; }
+    .stat .label { color: #888; font-size: 0.85rem; margin-top: 0.3rem; }
+    table { width: 100%; border-collapse: collapse; background: #12121a; border-radius: 12px; overflow: hidden; }
+    th, td { padding: 1rem 1.5rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    th { color: #ffc371; font-weight: 600; }
+    td { color: #888; }
+    .status { padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem; }
+    .shipped { background: rgba(40,200,64,0.2); color: #28c840; }
+    .pending { background: rgba(255,199,113,0.2); color: #ffc371; }
+    .delivered { background: rgba(126,200,227,0.2); color: #7ec8e3; }
+  </style>
+</head>
+<body>
+  <h1>Dashboard</h1>
+  <div class="stats">
+    <div class="stat"><div class="value" id="users">-</div><div class="label">Users</div></div>
+    <div class="stat"><div class="value" id="revenue">-</div><div class="label">Revenue</div></div>
+    <div class="stat"><div class="value" id="orders">-</div><div class="label">Orders</div></div>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody id="orders-table"></tbody>
+  </table>
+  <script>
+    fetch('/api/stats').then(r => r.json()).then(s => {
+      document.getElementById('users').textContent = s.users.toLocaleString();
+      document.getElementById('revenue').textContent = '$' + s.revenue.toLocaleString();
+      document.getElementById('orders').textContent = s.orders.toLocaleString();
+    });
+    fetch('/api/orders').then(r => r.json()).then(orders => {
+      document.getElementById('orders-table').innerHTML = orders.map(o =>
+        `<tr><td>#${o.id}</td><td>${o.customer}</td><td>$${o.amount}</td><td><span class="status ${o.status}">${o.status}</span></td></tr>`
+      ).join('');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+let todos = [];
+let nextId = 1;
+
+fn jsonResponse(data) {
+  return {
+    status: 200,
+    headers: {"Content-Type": "application/json"},
+    body: toString(data)
+  };
+}
+
+httpListen(3000, (req) => {
+  show(req.method + " " + req.path);
+
+  if (req.path is "/" and req.method is "GET") {
+    return readFile("index.html");
+  }
+
+  if (req.path is "/api/todos" and req.method is "GET") {
+    return jsonResponse(todos);
+  }
+
+  if (req.path is "/api/todos" and req.method is "POST") {
+    let todo = {id: nextId, text: req.body, done: false};
+    push(todos, todo);
+    nextId++;
+    return jsonResponse(todo);
+  }
+
+  if (req.path is "/api/todos" and req.method is "DELETE") {
+    todos = [];
+    return jsonResponse({status: "cleared"});
+  }
+
+  return {status: 404, body: "{\"error\": \"Not Found\"}"};
+});

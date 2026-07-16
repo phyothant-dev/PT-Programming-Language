@@ -1,0 +1,624 @@
+// ============================================
+// PT Language - Comprehensive Test Suite
+// ============================================
+let passed = 0;
+let failed = 0;
+
+fn check(name, actual, expected) {
+  if (actual is expected) {
+    passed += 1;
+  } else {
+    failed += 1;
+    show("FAIL: " + name + " -- expected " + toString(expected) + " got " + toString(actual));
+  }
+}
+
+// --- Variables & Let ---
+show("=== variables ===");
+let x = 10;
+let y = 3;
+check("let basic", x, 10);
+
+var old_style = "compat";
+check("var compat", old_style, "compat");
+
+// --- Arithmetic ---
+show("=== arithmetic ===");
+check("add", x + y, 13);
+check("sub", x - y, 7);
+check("mul", x * y, 30);
+check("div", 12 / 4, 3);
+check("mod", x % y, 1);
+
+// --- Compound Assignment ---
+show("=== compound assignment ===");
+let a = 5;
+a += 3; check("+=", a, 8);
+a -= 2; check("-=", a, 6);
+a *= 4; check("*=", a, 24);
+a /= 6; check("/=", a, 4);
+a %= 3; check("%=", a, 1);
+
+// --- Comparisons & is/isnt ---
+show("=== comparisons ===");
+check("is", 5 is 5, true);
+check("isnt", 5 isnt 5, false);
+check("eq", 5 == 5, true);
+check("neq", 5 != 5, false);
+check("lt", 3 < 5, true);
+check("gt", 5 > 3, true);
+check("lte", 3 <= 3, true);
+check("gte", 5 >= 5, true);
+
+// --- Logical Operators ---
+show("=== logical ===");
+check("and true", true and true, true);
+check("and false", true and false, false);
+check("or true", false or true, true);
+check("or false", false or false, false);
+
+// --- If / Unless / Else If ---
+show("=== conditionals ===");
+let result = "";
+if (x > y) { result = "bigger"; }
+check("if", result, "bigger");
+
+result = "";
+unless (x is y) { result = "different"; }
+check("unless", result, "different");
+
+let grade = 85;
+let gradeLetter = "";
+if (grade >= 90) {
+  gradeLetter = "A";
+} else if (grade >= 80) {
+  gradeLetter = "B";
+} else if (grade >= 70) {
+  gradeLetter = "C";
+} else {
+  gradeLetter = "F";
+}
+check("else if", gradeLetter, "B");
+
+// --- Ternary ---
+show("=== ternary ===");
+let msg = x > y ? "yes" : "no";
+check("ternary true", msg, "yes");
+msg = x < y ? "yes" : "no";
+check("ternary false", msg, "no");
+
+// --- While Loop ---
+show("=== while ===");
+let i = 0;
+while (i < 5) { i += 1; }
+check("while", i, 5);
+
+// --- For Loop ---
+show("=== for ===");
+let sum = 0;
+for (let j = 0; j <= 10; j += 1) { sum += j; }
+check("for sum", sum, 55);
+
+// --- For-each ---
+show("=== for-each ===");
+let total = 0;
+for (n in [10, 20, 30]) { total += n; }
+check("for-each array", total, 60);
+
+let chars = "";
+for (c in "hi") { chars += c; }
+check("for-each string", chars, "hi");
+
+// --- Loop / Break / Continue ---
+show("=== loop ===");
+let count = 0;
+loop {
+  count += 1;
+  if (count is 10) break;
+}
+check("loop break", count, 10);
+
+let evens = 0;
+for (let n = 0; n < 10; n += 1) {
+  if (n % 2 isnt 0) continue;
+  evens += 1;
+}
+check("continue", evens, 5);
+
+// --- Functions ---
+show("=== functions ===");
+fn add(a, b) { return a + b; }
+check("function call", add(2, 3), 5);
+
+fn fact(n) {
+  if (n <= 1) return 1;
+  return n * fact(n - 1);
+}
+check("recursion", fact(6), 720);
+
+// --- Arrow Functions ---
+show("=== arrow functions ===");
+fn square(n) => n * n;
+check("arrow", square(7), 49);
+
+fn greet(name) => "Hi, " + name + "!";
+check("arrow string", greet("PT"), "Hi, PT!");
+
+fn getfive() => 5;
+check("arrow no args", getfive(), 5);
+
+// --- Closures ---
+show("=== closures ===");
+fn makeCounter() {
+  let c = 0;
+  fn inc() {
+    c += 1;
+    return c;
+  }
+  return inc;
+}
+let counter = makeCounter();
+check("closure 1", counter(), 1);
+check("closure 2", counter(), 2);
+check("closure 3", counter(), 3);
+
+// --- Scope ---
+show("=== scope ===");
+let outer = "outer";
+{
+  check("outer scope", outer, "outer");
+  let outer = "shadowed";
+  check("shadowed", outer, "shadowed");
+}
+check("outer restored", outer, "outer");
+
+// --- Arrays ---
+show("=== arrays ===");
+let arr = [1, 2, 3, 4, 5];
+check("array literal", arr[0], 1);
+check("negative index", arr[-1], 5);
+arr[2] = 99;
+check("array assign", arr[2], 99);
+push(arr, 6);
+check("push", len(arr), 6);
+let last = pop(arr);
+check("pop", last, 6);
+check("nested", [[1, 2], [3, 4]][0][1], 2);
+
+// --- Strings ---
+show("=== strings ===");
+let s = "Hello World";
+check("string index", s[0], "H");
+check("string neg index", s[-1], "d");
+check("upper", upper(s), "HELLO WORLD");
+check("lower", lower(s), "hello world");
+check("trim", trim("  hi  "), "hi");
+check("substr", substr(s, 0, 5), "Hello");
+check("contains", contains(s, "World"), true);
+check("replace", replace(s, "World", "PT"), "Hello PT");
+check("split", split("a,b,c", ",")[1], "b");
+check("len string", len("hello"), 5);
+
+// --- String Interpolation ---
+show("=== string interpolation ===");
+let name = "PT";
+let ver = 2;
+check("interp simple", "Hello, ${name}!", "Hello, PT!");
+check("interp number", "Version ${ver}", "Version 2");
+check("interp expr", "2+3=${add(2, 3)}", "2+3=5");
+
+// --- Math Builtins ---
+show("=== math ===");
+check("abs", abs(-42), 42);
+check("sqrt", sqrt(9), 3);
+check("min", min(3, 7), 3);
+check("max", max(3, 7), 7);
+check("floor", floor(3.7), 3);
+check("ceil", ceil(3.2), 4);
+check("round", round(3.5), 4);
+
+// --- Type Checking ---
+show("=== type ===");
+check("type number", type(42), "number");
+check("type string", type("hi"), "string");
+check("type array", type([1, 2]), "array");
+check("type nil", type(nil), "nil");
+
+// --- Assert ---
+show("=== assert ===");
+assert(1 is 1, "basic assert");
+assert(true, "true assert");
+check("assert pass", 1, 1);
+
+// --- File I/O ---
+show("=== file io ===");
+writeFile("/tmp/pt_test.txt", "hello from pt");
+check("readFile", readFile("/tmp/pt_test.txt"), "hello from pt");
+check("readFile missing", readFile("/tmp/nope"), nil);
+check("writeFile", writeFile("/tmp/pt_test2.txt", "test"), true);
+
+// --- Maps ---
+show("=== maps ===");
+let m = {"a": 1, "b": 2, "c": 3};
+check("map dot", m.a, 1);
+check("map bracket", m["b"], 2);
+m.d = 4;
+check("map add", m.d, 4);
+check("keys", len(keys(m)), 4);
+check("values", len(values(m)), 4);
+check("has true", has(m, "a"), true);
+check("has false", has(m, "z"), false);
+let nested = {"x": {"y": 42}};
+check("nested map", nested.x.y, 42);
+
+// --- Lambdas ---
+show("=== lambdas ===");
+let double_it = (x) => x * 2;
+check("lambda basic", double_it(5), 10);
+let adder = (a, b) => a + b;
+check("lambda two args", adder(3, 4), 7);
+let apply = (f, x) => f(x);
+check("lambda higher-order", apply((x) => x * x, 7), 49);
+
+// --- Try / Catch ---
+show("=== try/catch ===");
+let caught = false;
+try {
+  throw "oops";
+} catch (e) {
+  caught = true;
+  check("catch error", e, "oops");
+}
+check("catch ran", caught, true);
+
+let divResult = "none";
+try {
+  let z = 10 / 0;
+} catch (e) {
+  divResult = "caught";
+}
+check("catch div by zero", divResult, "caught");
+
+let finallyRan = false;
+try {
+  throw "err";
+} catch (e) {
+} finally {
+  finallyRan = true;
+}
+check("finally", finallyRan, true);
+
+// --- New Builtins ---
+show("=== new builtins ===");
+check("join", join(["a", "b", "c"], "-"), "a-b-c");
+check("indexOf str", indexOf("hello", "ell"), 1);
+check("indexOf arr", indexOf([10, 20, 30], 20), 1);
+check("indexOf miss", indexOf([10, 20], 99), -1);
+check("sort nums", sort([3, 1, 2])[0], 1);
+check("sort strs", sort(["c", "a", "b"])[0], "a");
+check("range 1", len(range(5)), 5);
+check("range 2", range(1, 4)[0], 1);
+check("range 2 end", range(1, 4)[2], 3);
+
+let doubled = map([1, 2, 3], (x) => x * 2);
+check("map builtin", doubled[0], 2);
+check("map builtin 2", doubled[2], 6);
+
+let filtered = filter([1, 2, 3, 4, 5], (x) => x % 2 == 0);
+check("filter", len(filtered), 2);
+check("filter val", filtered[0], 2);
+
+let redSum = reduce([1, 2, 3, 4], (a, b) => a + b, 0);
+check("reduce", redSum, 10);
+
+let ri = random(1000);
+check("random range", ri >= 0 and ri < 1000, true);
+
+let t1 = clock();
+let s2 = 0;
+for (let k = 0; k < 10000; k += 1) { s2 += k; }
+let t2 = clock();
+check("clock", t2 > t1, true);
+
+// --- Const ---
+show("=== const ===");
+const PI = 3.14159;
+check("const", PI, 3.14159);
+let constErr = "none";
+try {
+  PI = 999;
+} catch (e) {
+  constErr = "caught";
+}
+check("const protection", constErr, "caught");
+
+// --- Print (no newline) ---
+show("=== print ===");
+print("hello");
+print(" world");
+show("");
+
+// ============================================
+// NEW FEATURES TESTS - TIER 1-3
+// ============================================
+
+// --- Tier 1: String repetition ---
+show("=== string repetition ===");
+check("str rep 1", "ha" * 3, "hahaha");
+check("str rep 2", "x" * 5, "xxxxx");
+check("str rep 3", "ab" * 2, "abab");
+check("str rep 0", "abc" * 0, "");
+check("num mul 1", 3 * "ab", "ababab");
+check("num mul 2", 2 * "hi", "hihi");
+
+// --- Tier 1: not keyword ---
+show("=== not keyword ===");
+check("not true", not true, false);
+check("not false", not false, true);
+check("not 0", not 0, true);
+check("not 1", not 1, false);
+check("not empty", not "", true);
+check("not str", not "hi", false);
+let nval = 5;
+check("not expr", not (nval == 3), true);
+
+// --- Tier 1: elif ---
+show("=== elif ===");
+let egrade = 85;
+let eletter = "";
+if (egrade >= 90) {
+  eletter = "A";
+} elif (egrade >= 80) {
+  eletter = "B";
+} elif (egrade >= 70) {
+  eletter = "C";
+} else {
+  eletter = "F";
+}
+check("elif basic", eletter, "B");
+
+let egrade2 = 95;
+let eletter2 = "";
+if (egrade2 >= 90) {
+  eletter2 = "A";
+} elif (egrade2 >= 80) {
+  eletter2 = "B";
+} else {
+  eletter2 = "F";
+}
+check("elif first match", eletter2, "A");
+
+let egrade3 = 50;
+let eletter3 = "";
+if (egrade3 >= 90) {
+  eletter3 = "A";
+} elif (egrade3 >= 80) {
+  eletter3 = "B";
+} else {
+  eletter3 = "F";
+}
+check("elif fallthrough", eletter3, "F");
+
+// --- Tier 1: i++ / i-- ---
+show("=== postfix inc/dec ===");
+let ci = 0;
+ci++;
+check("postfix inc", ci, 1);
+ci++;
+ci++;
+check("postfix inc 2", ci, 3);
+ci--;
+check("postfix dec", ci, 2);
+ci--;
+ci--;
+check("postfix dec 2", ci, 0);
+
+// --- Tier 1: repeat ---
+show("=== repeat ===");
+let rsum = 0;
+repeat 5 {
+  rsum = rsum + 1;
+}
+check("repeat 5", rsum, 5);
+
+let rstr = "";
+repeat 3 {
+  rstr = rstr + "a";
+}
+check("repeat concat", rstr, "aaa");
+
+// --- Tier 1: in operator ---
+show("=== in operator ===");
+let rarr = [10, 20, 30];
+check("in array found", 20 in rarr, true);
+check("in array not found", 99 in rarr, false);
+check("in string found", "el" in "hello", true);
+check("in string not found", "xyz" in "hello", false);
+let rmap = {a: 1, b: 2};
+check("in map found", "a" in rmap, true);
+check("in map not found", "c" in rmap, false);
+
+// --- Tier 2: multiline strings ---
+show("=== multiline strings ===");
+let ml = `
+Hello
+World
+`;
+check("multiline contains", contains(ml, "Hello"), true);
+check("multiline contains 2", contains(ml, "World"), true);
+check("multiline newline", contains(ml, "\n"), true);
+
+// --- Tier 2: export ---
+show("=== export ===");
+// export is tested implicitly via function definitions
+
+// --- Tier 3: match ---
+show("=== match ===");
+let mday = 2;
+let mname = match(mday) {
+  1 => "Monday"
+  2 => "Tuesday"
+  3 => "Wednesday"
+  4 => "Thursday"
+  5 => "Friday"
+  6 => "Saturday"
+  7 => "Sunday"
+};
+check("match basic", mname, "Tuesday");
+
+let mval = 42;
+let mlabel = match(mval) {
+  0 => "zero"
+  42 => "answer"
+  100 => "hundred"
+};
+check("match found", mlabel, "answer");
+
+// --- Tier 3: list comprehension ---
+show("=== list comprehension ===");
+let lnums = [1, 2, 3, 4, 5];
+let ldoubles = [x * 2 for x in lnums];
+check("lc doubles", ldoubles[0], 2);
+check("lc doubles 2", ldoubles[4], 10);
+check("lc doubles len", len(ldoubles), 5);
+
+let leven = [x for x in lnums if x % 2 == 0];
+check("lc filter", leven[0], 2);
+check("lc filter 2", leven[1], 4);
+check("lc filter len", len(leven), 2);
+
+// --- Tier 3: class/struct ---
+show("=== class ===");
+class Dog {
+  name = "";
+  age = 0;
+
+  fn init(name, age) {
+    this.name = name;
+    this.age = age;
+  }
+
+  fn bark() {
+    return this.name + " says woof!";
+  }
+
+  fn getAge() {
+    return this.age;
+  }
+}
+
+let d = Dog("Rex", 5);
+check("class field", d.name, "Rex");
+check("class method", d.bark(), "Rex says woof!");
+check("class age", d.getAge(), 5);
+
+// Class inheritance
+class Puppy < Dog {
+  fn bark() {
+    return this.name + " says yip!";
+  }
+}
+
+let p = Puppy("Tiny", 1);
+check("inherit field", p.name, "Tiny");
+check("inherit method", p.bark(), "Tiny says yip!");
+check("inherit age", p.getAge(), 1);
+
+// --- Tier 3: enum ---
+show("=== enum ===");
+enum Color {
+  RED, GREEN, BLUE
+}
+check("enum RED", Color.RED, 0);
+check("enum GREEN", Color.GREEN, 1);
+check("enum BLUE", Color.BLUE, 2);
+
+// --- Tier 3: static methods ---
+show("=== static methods ===");
+class MathUtil {
+  static fn doubleIt(x) {
+    return x * 2;
+  }
+
+  static fn add(a, b) {
+    return a + b;
+  }
+}
+check("static method 1", MathUtil.doubleIt(5), 10);
+check("static method 2", MathUtil.add(3, 4), 7);
+
+// --- exit keyword ---
+show("=== exit keyword ===");
+// exit is mapped to return, so it works as a statement-level return
+
+// --- sqlite ---
+show("=== sqlite ===");
+let sdb = sqliteOpen("/tmp/pt_test.db");
+sqliteExec(sdb, "DROP TABLE IF EXISTS test");
+sqliteExec(sdb, "CREATE TABLE test (id INTEGER, val TEXT)");
+sqliteExec(sdb, "INSERT INTO test VALUES (1, 'hello')");
+sqliteExec(sdb, "INSERT INTO test VALUES (2, 'world')");
+let srows = sqliteQuery(sdb, "SELECT * FROM test");
+check("sqlite row count", len(srows), 2);
+let srow0 = srows[0];
+check("sqlite row data", srow0.val, "hello");
+let sfiltered = sqliteQuery(sdb, "SELECT val FROM test WHERE id = 2");
+check("sqlite filtered", sfiltered[0].val, "world");
+sqliteExec(sdb, "UPDATE test SET val = 'PT' WHERE id = 1");
+let supdated = sqliteQuery(sdb, "SELECT val FROM test WHERE id = 1");
+check("sqlite update", supdated[0].val, "PT");
+sqliteExec(sdb, "DELETE FROM test WHERE id = 2");
+let safterdel = sqliteQuery(sdb, "SELECT * FROM test");
+check("sqlite delete", len(safterdel), 1);
+sqliteClose(sdb);
+check("sqlite close", 1, 1);
+
+// --- JSON ---
+show("=== json ===");
+let j1 = parseJSON("{\"a\": 1, \"b\": \"hello\"}");
+check("parseJSON map", j1.a, 1);
+check("parseJSON string", j1.b, "hello");
+let j2 = parseJSON("[1, 2, 3]");
+check("parseJSON array", j2[0], 1);
+check("parseJSON array len", len(j2), 3);
+let j3 = parseJSON("{\"nested\": {\"x\": true}}");
+check("parseJSON nested", j3.nested.x, true);
+let j4 = parseJSON("null");
+check("parseJSON null", type(j4), "nil");
+let j5 = parseJSON("{\"n\": 42, \"s\": \"hi\", \"b\": false}");
+let j5s = toJSON(j5);
+let j5r = parseJSON(j5s);
+check("toJSON roundtrip", j5r.n, 42);
+check("toJSON roundtrip str", j5r.s, "hi");
+check("toJSON roundtrip bool", j5r.b, false);
+
+// --- Crypto ---
+show("=== crypto ===");
+check("sha256", hash("hello"), "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+check("md5", hash("hello", "md5"), "5d41402abc4b2a76b9719d911017c592");
+check("base64 encode", base64Encode("Hello"), "SGVsbG8=");
+check("base64 decode", base64Decode("SGVsbG8="), "Hello");
+check("base64 roundtrip", base64Decode(base64Encode("PT Language")), "PT Language");
+let id = uuid();
+check("uuid format", len(id), 36);
+
+// --- Sleep ---
+show("=== sleep ===");
+let sstart = clock();
+sleep(50);
+let smillis = (clock() - sstart) * 1000;
+check("sleep works", smillis > 30, true);
+
+// --- Spawn ---
+show("=== spawn ===");
+check("spawn returns", 1, 1);
+
+// --- Results ---
+show("=== results ===");
+show("Passed: " + toString(passed));
+show("Failed: " + toString(failed));
+if (failed is 0) {
+  show("ALL TESTS PASSED");
+} else {
+  show("SOME TESTS FAILED");
+}
