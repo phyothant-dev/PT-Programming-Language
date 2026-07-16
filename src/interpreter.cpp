@@ -975,12 +975,17 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
       frames[frameCount].chunk = curChunk;
       frames[frameCount].returnIp = ip;
       frames[frameCount].returnSp = sp - 1 - argc;
-      frames[frameCount].savedEnv = env;
       frames[frameCount].callerLocalStart = localStart;
+      if (cfn->closure.get() != env.get()) {
+        frames[frameCount].savedEnv = env;
+        env = cfn->closure;
+        frames[frameCount].envSaved = true;
+      } else {
+        frames[frameCount].envSaved = false;
+      }
       frameCount++;
       curChunk = cfn->bytecode.get();
       ip = 0;
-      env = cfn->closure;
       frames[frameCount-1].localStart = sp - argc;
       localStart = sp - argc;
       int numLocals = curChunk->numLocals;
@@ -1012,7 +1017,8 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
     ip = frames[frameCount].returnIp;
     sp = frames[frameCount].returnSp;
     localStart = frames[frameCount].callerLocalStart;
-    env = frames[frameCount].savedEnv;
+    if (frames[frameCount].envSaved)
+      env = frames[frameCount].savedEnv;
     stack[sp++] = std::move(result);
     VM_DISPATCH();
   }
@@ -1427,12 +1433,17 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
         frames[frameCount].chunk = curChunk;
         frames[frameCount].returnIp = ip;
         frames[frameCount].returnSp = sp - 1 - argc;
-        frames[frameCount].savedEnv = env;
         frames[frameCount].callerLocalStart = localStart;
+        if (cfn->closure.get() != env.get()) {
+          frames[frameCount].savedEnv = env;
+          env = cfn->closure;
+          frames[frameCount].envSaved = true;
+        } else {
+          frames[frameCount].envSaved = false;
+        }
         frameCount++;
         curChunk = cfn->bytecode.get();
         ip = 0;
-        env = cfn->closure;
         frames[frameCount-1].localStart = sp - argc;
         localStart = sp - argc;
         int numLocals = curChunk->numLocals;
@@ -1463,7 +1474,8 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
       ip = frames[frameCount].returnIp;
       sp = frames[frameCount].returnSp;
       localStart = frames[frameCount].callerLocalStart;
-      env = frames[frameCount].savedEnv;
+      if (frames[frameCount].envSaved)
+        env = frames[frameCount].savedEnv;
       stack[sp++] = std::move(result);
       break;
     }

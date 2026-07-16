@@ -312,6 +312,7 @@ private:
     int returnSp;
     std::shared_ptr<Environment> savedEnv;
     int callerLocalStart;
+    bool envSaved = false;
   };
   static const int VM_MAX_FRAMES = 256;
   static const int VM_MAX_STACK = 4096;
