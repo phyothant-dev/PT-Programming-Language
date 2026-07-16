@@ -769,7 +769,497 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
 
   #define VM_READ_U32() curChunk->readU32(ip)
   #define VM_READ_I32() curChunk->readI32(ip)
+  #define VM_DISPATCH() goto *dispatch_table[static_cast<uint8_t>(curChunk->code[ip++])]
+  #define VM_CASE(name) op_##name
 
+#if defined(__GNUC__) || defined(__clang__)
+  PTValue b;
+  PTValue v;
+  PTValue callee;
+  PTValue result;
+  PTValue idx;
+  PTValue val;
+  PTValue obj;
+  PTValue rhs;
+  double old;
+  std::shared_ptr<std::vector<PTValue>> arr;
+  std::shared_ptr<std::unordered_map<std::string, PTValue>> m;
+  std::shared_ptr<PTFunction> func;
+  std::shared_ptr<Environment> e;
+  std::shared_ptr<PTFunction> mf;
+  std::shared_ptr<Environment> me;
+  std::shared_ptr<PTFunction> method;
+  static const void* dispatch_table[] = {
+    &&VM_CASE(LOAD_CONST), &&VM_CASE(LOAD_LOCAL), &&VM_CASE(STORE_LOCAL),
+    &&VM_CASE(LOAD_VAR), &&VM_CASE(STORE_VAR), &&VM_CASE(DEFINE_VAR),
+    &&VM_CASE(POP),
+    &&VM_CASE(ADD), &&VM_CASE(SUB), &&VM_CASE(MUL), &&VM_CASE(DIV), &&VM_CASE(MOD), &&VM_CASE(NEG),
+    &&VM_CASE(EQ), &&VM_CASE(NEQ), &&VM_CASE(LT), &&VM_CASE(GT), &&VM_CASE(LTE), &&VM_CASE(GTE),
+    &&VM_CASE(NOT),
+    &&VM_CASE(JMP), &&VM_CASE(JMP_IF_FALSE), &&VM_CASE(JMP_IF_TRUE),
+    &&VM_CASE(CALL), &&VM_CASE(RETURN),
+    &&VM_CASE(PRINT), &&VM_CASE(PRINT_NL),
+    &&VM_CASE(ARRAY_NEW), &&VM_CASE(INDEX_GET), &&VM_CASE(INDEX_SET),
+    &&VM_CASE(DOT_GET), &&VM_CASE(DOT_SET),
+    &&VM_CASE(MAP_NEW),
+    &&VM_CASE(MAKE_FUNCTION),
+    &&VM_CASE(ARRAY_LEN),
+    &&VM_CASE(INC_LOCAL), &&VM_CASE(DEC_LOCAL), &&VM_CASE(ADD_STORE_LOCAL),
+    &&VM_CASE(INC_GLOBAL), &&VM_CASE(DEC_GLOBAL), &&VM_CASE(ADD_STORE_GLOBAL),
+    &&VM_CASE(PUSH_ARRAY), &&VM_CASE(STRING_APPEND),
+    &&VM_CASE(SYNC_ENV)
+  };
+
+  VM_DISPATCH();
+
+  VM_CASE(LOAD_CONST):
+    stack[sp++] = curChunk->constants[VM_READ_U32()];
+    VM_DISPATCH();
+  VM_CASE(LOAD_LOCAL): {
+    uint32_t idx = VM_READ_U32();
+    stack[sp++] = stack[localStart + idx];
+    VM_DISPATCH();
+  }
+  VM_CASE(STORE_LOCAL): {
+    uint32_t idx = VM_READ_U32();
+    stack[localStart + idx] = stack[--sp];
+    int minSp = localStart + curChunk->numLocals;
+    if (sp < minSp) sp = minSp;
+    VM_DISPATCH();
+  }
+  VM_CASE(LOAD_VAR): {
+    uint32_t id = VM_READ_U32();
+    const PTValue* val = findVar(id);
+    stack[sp++] = val ? *val : PT_NIL;
+    VM_DISPATCH();
+  }
+  VM_CASE(STORE_VAR): {
+    uint32_t id = VM_READ_U32();
+    assignVar(id, stack[--sp]);
+    VM_DISPATCH();
+  }
+  VM_CASE(DEFINE_VAR): {
+    uint32_t id = VM_READ_U32();
+    defineVar(id, stack[--sp]);
+    VM_DISPATCH();
+  }
+  VM_CASE(POP): {
+    sp--;
+    int minSp = frames[frameCount-1].localStart + curChunk->numLocals;
+    if (sp < minSp) sp = minSp;
+    VM_DISPATCH();
+  }
+  VM_CASE(NEG): stack[sp-1].numValue = -stack[sp-1].numValue; VM_DISPATCH();
+  VM_CASE(NOT): {
+    v = stack[--sp];
+    stack[sp++] = v.isBool() ? (v.boolValue ? PT_FALSE : PT_TRUE)
+                  : v.isNumber() ? (v.numValue == 0 ? PT_TRUE : PT_FALSE)
+                  : v.isNil() ? PT_TRUE
+                  : (v.value.empty() || v.value == "false" || v.value == "nil" || v.value == "0" ? PT_TRUE : PT_FALSE);
+    VM_DISPATCH();
+  }
+  VM_CASE(ADD): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) a.numValue += b.numValue;
+    else if (a.isString() && b.isString()) a.value += b.value;
+    else a = PTValue(a.ensureStr() + b.ensureStr());
+    VM_DISPATCH();
+  }
+  VM_CASE(SUB): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) a.numValue -= b.numValue;
+    else a = PTValue(toDouble(a) - toDouble(b));
+    VM_DISPATCH();
+  }
+  VM_CASE(MUL): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) a.numValue *= b.numValue;
+    else a = PTValue(toDouble(a) * toDouble(b));
+    VM_DISPATCH();
+  }
+  VM_CASE(DIV): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    double r = toDouble(b);
+    if (r == 0) throw PTRuntimeError("Division by zero");
+    if (a.isNumber() && b.isNumber()) a.numValue /= r;
+    else a = PTValue(toDouble(a) / r);
+    VM_DISPATCH();
+  }
+  VM_CASE(MOD): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    double r = toDouble(b);
+    if (r == 0) throw PTRuntimeError("Modulo by zero");
+    a = PTValue(std::fmod(toDouble(a), r));
+    VM_DISPATCH();
+  }
+  VM_CASE(EQ): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    bool eq;
+    if (a.isNumber() && b.isNumber()) eq = a.numValue == b.numValue;
+    else eq = isEqual(a, b);
+    stack[sp-1] = eq ? PT_TRUE : PT_FALSE;
+    VM_DISPATCH();
+  }
+  VM_CASE(NEQ): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    bool eq;
+    if (a.isNumber() && b.isNumber()) eq = a.numValue == b.numValue;
+    else eq = isEqual(a, b);
+    stack[sp-1] = eq ? PT_FALSE : PT_TRUE;
+    VM_DISPATCH();
+  }
+  VM_CASE(LT): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue < b.numValue ? PT_TRUE : PT_FALSE;
+    else stack[sp-1] = a.ensureStr() < b.ensureStr() ? PT_TRUE : PT_FALSE;
+    VM_DISPATCH();
+  }
+  VM_CASE(GT): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue > b.numValue ? PT_TRUE : PT_FALSE;
+    else stack[sp-1] = a.ensureStr() > b.ensureStr() ? PT_TRUE : PT_FALSE;
+    VM_DISPATCH();
+  }
+  VM_CASE(LTE): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue <= b.numValue ? PT_TRUE : PT_FALSE;
+    else stack[sp-1] = a.ensureStr() <= b.ensureStr() ? PT_TRUE : PT_FALSE;
+    VM_DISPATCH();
+  }
+  VM_CASE(GTE): {
+    b = stack[--sp];
+    PTValue& a = stack[sp-1];
+    if (a.isNumber() && b.isNumber()) stack[sp-1] = a.numValue >= b.numValue ? PT_TRUE : PT_FALSE;
+    else stack[sp-1] = a.ensureStr() >= b.ensureStr() ? PT_TRUE : PT_FALSE;
+    VM_DISPATCH();
+  }
+  VM_CASE(JMP): {
+    int32_t offset = VM_READ_I32();
+    ip += offset;
+    VM_DISPATCH();
+  }
+  VM_CASE(JMP_IF_FALSE): {
+    int32_t offset = VM_READ_I32();
+    PTValue& v = stack[sp-1];
+    if (!isTruthy(v)) ip += offset;
+    sp--;
+    VM_DISPATCH();
+  }
+  VM_CASE(JMP_IF_TRUE): {
+    int32_t offset = VM_READ_I32();
+    PTValue& v = stack[sp-1];
+    if (isTruthy(v)) ip += offset;
+    sp--;
+    VM_DISPATCH();
+  }
+  VM_CASE(CALL): {
+    uint32_t argc = VM_READ_U32();
+    callee = stack[sp - 1 - argc];
+
+    if (callee.isFunction() && callee.function->isBuiltin) {
+      PTValue* argPtr = &stack[sp - argc];
+      sp = sp - 1 - argc;
+      stack[sp++] = callBuiltinFast(callee.function->name, argPtr, argc);
+    } else if (callee.isFunction() && callee.function->bytecode) {
+      auto& cfn = callee.function;
+      frames[frameCount].chunk = curChunk;
+      frames[frameCount].returnIp = ip;
+      frames[frameCount].returnSp = sp - 1 - argc;
+      frames[frameCount].savedEnv = env;
+      frames[frameCount].callerLocalStart = localStart;
+      frameCount++;
+      curChunk = cfn->bytecode.get();
+      ip = 0;
+      env = cfn->closure;
+      frames[frameCount-1].localStart = sp - argc;
+      localStart = sp - argc;
+      int numLocals = curChunk->numLocals;
+      for (int i = argc; i < numLocals; i++)
+        stack[sp - argc + i] = PT_NIL;
+      if (curChunk->selfLocal >= 0)
+        stack[sp - argc + curChunk->selfLocal] = callee;
+      sp = sp - argc + numLocals;
+      VM_DISPATCH();
+    } else if (callee.isFunction()) {
+      std::vector<PTValue> args(argc);
+      for (uint32_t i = 0; i < argc; i++)
+        args[i] = std::move(stack[sp - argc + i]);
+      sp = sp - 1 - argc;
+      stack[sp++] = evaluateFunction(callee, args);
+    } else {
+      sp = sp - 1 - argc;
+      stack[sp++] = PT_NIL;
+    }
+    VM_DISPATCH();
+  }
+  VM_CASE(RETURN): {
+    result = stack[--sp];
+    if (frameCount == 1) {
+      return result;
+    }
+    frameCount--;
+    curChunk = frames[frameCount].chunk;
+    ip = frames[frameCount].returnIp;
+    sp = frames[frameCount].returnSp;
+    localStart = frames[frameCount].callerLocalStart;
+    env = frames[frameCount].savedEnv;
+    stack[sp++] = std::move(result);
+    VM_DISPATCH();
+  }
+  VM_CASE(PRINT): {
+    v = stack[--sp];
+    std::cout << formatValue(v) << std::endl;
+    VM_DISPATCH();
+  }
+  VM_CASE(PRINT_NL): {
+    v = stack[--sp];
+    std::cout << formatValue(v);
+    VM_DISPATCH();
+  }
+  VM_CASE(ARRAY_NEW): {
+    uint32_t count = VM_READ_U32();
+    arr = std::make_shared<std::vector<PTValue>>(count);
+    for (uint32_t i = 0; i < count; i++)
+      (*arr)[i] = std::move(stack[sp - count + i]);
+    sp = sp - count;
+    stack[sp++] = PTValue(arr);
+    VM_DISPATCH();
+  }
+  VM_CASE(INDEX_GET): {
+    idx = std::move(stack[--sp]);
+    callee = std::move(stack[--sp]);
+    if (callee.isArray()) {
+      int i = idx.isNumber() ? (int)idx.numValue : (int)std::stod(idx.value);
+      int size = (int)callee.array->size();
+      if (i < 0) i += size;
+      if (i < 0 || i >= size) throw PTRuntimeError("Index out of bounds");
+      stack[sp++] = (*callee.array)[i];
+    } else if (callee.isMap()) {
+      auto it = callee.map->find(idx.value);
+      if (it == callee.map->end()) throw PTRuntimeError("Undefined key '" + idx.value + "'");
+      stack[sp++] = it->second;
+    } else {
+      int i = idx.isNumber() ? (int)idx.numValue : (int)std::stod(idx.value);
+      int size = (int)callee.value.size();
+      if (i < 0) i += size;
+      if (i < 0 || i >= size) throw PTRuntimeError("String index out of bounds");
+      stack[sp++] = PTValue(std::string(1, callee.value[i]));
+    }
+    VM_DISPATCH();
+  }
+  VM_CASE(INDEX_SET): {
+    val = std::move(stack[--sp]);
+    idx = std::move(stack[--sp]);
+    callee = std::move(stack[--sp]);
+    if (!callee.isArray()) throw PTRuntimeError("Can only assign index into arrays");
+    int i = idx.isNumber() ? (int)idx.numValue : (int)std::stod(idx.value);
+    int size = (int)callee.array->size();
+    if (i < 0) i += size;
+    if (i < 0 || i >= size) throw PTRuntimeError("Index out of bounds");
+    (*callee.array)[i] = val;
+    stack[sp++] = std::move(val);
+    VM_DISPATCH();
+  }
+  VM_CASE(MAP_NEW): {
+    uint32_t count = VM_READ_U32();
+    m = std::make_shared<std::unordered_map<std::string, PTValue>>();
+    for (uint32_t i = 0; i < count; i++) {
+      PTValue key = std::move(stack[sp - count * 2 + i * 2]);
+      PTValue value = std::move(stack[sp - count * 2 + i * 2 + 1]);
+      (*m)[key.value] = std::move(value);
+    }
+    sp = sp - count * 2;
+    stack[sp++] = PTValue(m);
+    VM_DISPATCH();
+  }
+  VM_CASE(DOT_GET): {
+    uint32_t nameId = VM_READ_U32();
+    obj = std::move(stack[--sp]);
+    const std::string& name = interner.name(nameId);
+    if (obj.isInstance()) {
+      auto it = obj.instance->fields.find(name);
+      if (it != obj.instance->fields.end()) { stack[sp++] = it->second; VM_DISPATCH(); }
+      auto mit = obj.instance->klass->methods.find(name);
+      if (mit != obj.instance->klass->methods.end()) {
+        method = mit->second.function;
+        mf = std::make_shared<PTFunction>();
+        mf->name = method->name; mf->params = method->params; mf->paramIds = method->paramIds;
+        mf->body = method->body; mf->closure = method->closure;
+        static int thisId = -1;
+        if (thisId < 0) thisId = interner.intern("this");
+        me = std::make_shared<Environment>(mf->closure);
+        me->set(thisId, obj);
+        mf->closure = me;
+        stack[sp++] = PTValue(mf);
+        VM_DISPATCH();
+      }
+      if (obj.instance->klass->parent) {
+        auto pit = obj.instance->klass->parent->methods.find(name);
+        if (pit != obj.instance->klass->parent->methods.end()) {
+          method = pit->second.function;
+          mf = std::make_shared<PTFunction>();
+          mf->name = method->name; mf->params = method->params; mf->paramIds = method->paramIds;
+          mf->body = method->body; mf->closure = method->closure;
+          static int thisId = -1;
+          if (thisId < 0) thisId = interner.intern("this");
+          me = std::make_shared<Environment>(mf->closure);
+          me->set(thisId, obj);
+          mf->closure = me;
+          stack[sp++] = PTValue(mf);
+          VM_DISPATCH();
+        }
+      }
+      throw PTRuntimeError("Undefined property '" + name + "'");
+    }
+    if (obj.isMap()) {
+      auto it = obj.map->find(name);
+      if (it != obj.map->end()) { stack[sp++] = it->second; VM_DISPATCH(); }
+      throw PTRuntimeError("Undefined key '" + name + "'");
+    }
+    throw PTRuntimeError("Cannot access property on non-object");
+  }
+  VM_CASE(DOT_SET): {
+    uint32_t nameId = VM_READ_U32();
+    val = std::move(stack[--sp]);
+    obj = std::move(stack[--sp]);
+    const std::string& name = interner.name(nameId);
+    if (obj.isInstance()) {
+      obj.instance->fields[name] = val;
+      stack[sp++] = std::move(val);
+      VM_DISPATCH();
+    }
+    if (obj.isMap()) {
+      (*obj.map)[name] = val;
+      stack[sp++] = std::move(val);
+      VM_DISPATCH();
+    }
+    throw PTRuntimeError("Cannot set property on non-object");
+  }
+  VM_CASE(MAKE_FUNCTION): {
+    uint32_t chunkIdx = VM_READ_U32();
+    auto& proto = curChunk->constants[chunkIdx];
+    func = std::make_shared<PTFunction>();
+    func->name = proto.function->name;
+    func->bytecode = proto.function->bytecode;
+    func->body = proto.function->body;
+    func->closure = env;
+    func->params = proto.function->params;
+    func->paramIds = proto.function->paramIds;
+    stack[sp++] = PTValue(func);
+    VM_DISPATCH();
+  }
+  VM_CASE(ARRAY_LEN): {
+    v = std::move(stack[--sp]);
+    if (v.isArray()) stack[sp++] = PTValue(static_cast<double>(v.array->size()));
+    else if (v.isString()) stack[sp++] = PTValue(static_cast<double>(v.value.size()));
+    else throw PTRuntimeError("len() expects a string or array");
+    VM_DISPATCH();
+  }
+  VM_CASE(INC_LOCAL): {
+    uint32_t idx = VM_READ_U32();
+    old = stack[localStart + idx].numValue;
+    stack[sp++] = PTValue(old);
+    stack[localStart + idx] = PTValue(old + 1.0);
+    VM_DISPATCH();
+  }
+  VM_CASE(DEC_LOCAL): {
+    uint32_t idx = VM_READ_U32();
+    old = stack[localStart + idx].numValue;
+    stack[sp++] = PTValue(old);
+    stack[localStart + idx] = PTValue(old - 1.0);
+    VM_DISPATCH();
+  }
+  VM_CASE(ADD_STORE_LOCAL): {
+    uint32_t target = VM_READ_U32();
+    rhs = std::move(stack[--sp]);
+    PTValue& lhs = stack[localStart + target];
+    if (lhs.isNumber() && rhs.isNumber()) lhs.numValue += rhs.numValue;
+    else if (lhs.isString() && rhs.isString()) lhs.value += rhs.value;
+    else lhs = PTValue(formatValue(lhs) + formatValue(rhs));
+    VM_DISPATCH();
+  }
+  VM_CASE(INC_GLOBAL): {
+    uint32_t id = VM_READ_U32();
+    e = env;
+    while (e) {
+      auto it = e->idxMap.find(id);
+      if (it != e->idxMap.end()) {
+        double old = e->values[it->second].second.numValue;
+        e->values[it->second].second.numValue = old + 1.0;
+        stack[sp++] = PTValue(old);
+        break;
+      }
+      e = e->enclosing;
+    }
+    VM_DISPATCH();
+  }
+  VM_CASE(DEC_GLOBAL): {
+    uint32_t id = VM_READ_U32();
+    e = env;
+    while (e) {
+      auto it = e->idxMap.find(id);
+      if (it != e->idxMap.end()) {
+        double old = e->values[it->second].second.numValue;
+        e->values[it->second].second.numValue = old - 1.0;
+        stack[sp++] = PTValue(old);
+        break;
+      }
+      e = e->enclosing;
+    }
+    VM_DISPATCH();
+  }
+  VM_CASE(ADD_STORE_GLOBAL): {
+    uint32_t id = VM_READ_U32();
+    rhs = std::move(stack[--sp]);
+    e = env;
+    while (e) {
+      auto it = e->idxMap.find(id);
+      if (it != e->idxMap.end()) {
+        PTValue& lhs = e->values[it->second].second;
+        if (lhs.isNumber() && rhs.isNumber()) lhs.numValue += rhs.numValue;
+        else if (lhs.isString() && rhs.isString()) lhs.value += rhs.value;
+        else lhs = PTValue(formatValue(lhs) + formatValue(rhs));
+        stack[sp++] = lhs;
+        break;
+      }
+      e = e->enclosing;
+    }
+    VM_DISPATCH();
+  }
+  VM_CASE(PUSH_ARRAY): {
+    val = std::move(stack[--sp]);
+    PTValue& arr = stack[sp - 1];
+    if (arr.isArray()) {
+      arr.array->push_back(std::move(val));
+    }
+    VM_DISPATCH();
+  }
+  VM_CASE(STRING_APPEND): {
+    rhs = std::move(stack[--sp]);
+    PTValue& lhs = stack[sp - 1];
+    if (lhs.isString() && rhs.isString()) lhs.value += rhs.value;
+    else if (lhs.isString()) lhs.value += formatValue(rhs);
+    else lhs = PTValue(formatValue(lhs) + formatValue(rhs));
+    VM_DISPATCH();
+  }
+  VM_CASE(SYNC_ENV): {
+    uint32_t envId = VM_READ_U32();
+    uint32_t localIdx = VM_READ_U32();
+    env->set(envId, stack[localStart + localIdx]);
+    VM_DISPATCH();
+  }
+
+#else
   while (true) {
     Op op = static_cast<Op>(curChunk->code[ip++]);
 
@@ -912,19 +1402,21 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
     }
     case Op::JMP_IF_FALSE: {
       int32_t offset = VM_READ_I32();
-      PTValue v = stack[--sp];
+      PTValue& v = stack[sp-1];
       if (!isTruthy(v)) ip += offset;
+      sp--;
       break;
     }
     case Op::JMP_IF_TRUE: {
       int32_t offset = VM_READ_I32();
-      PTValue v = stack[--sp];
+      PTValue& v = stack[sp-1];
       if (isTruthy(v)) ip += offset;
+      sp--;
       break;
     }
     case Op::CALL: {
       uint32_t argc = VM_READ_U32();
-      PTValue callee = stack[sp - 1 - argc];
+    callee = stack[sp - 1 - argc];
 
       if (callee.isFunction() && callee.function->isBuiltin) {
         PTValue* argPtr = &stack[sp - argc];
@@ -987,7 +1479,7 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
     }
     case Op::ARRAY_NEW: {
       uint32_t count = VM_READ_U32();
-      auto arr = std::make_shared<std::vector<PTValue>>(count);
+    arr = std::make_shared<std::vector<PTValue>>(count);
       for (uint32_t i = 0; i < count; i++)
         (*arr)[i] = std::move(stack[sp - count + i]);
       sp = sp - count;
@@ -1031,7 +1523,7 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
     }
     case Op::MAP_NEW: {
       uint32_t count = VM_READ_U32();
-      auto m = std::make_shared<std::unordered_map<std::string, PTValue>>();
+    m = std::make_shared<std::unordered_map<std::string, PTValue>>();
       for (uint32_t i = 0; i < count; i++) {
         PTValue key = std::move(stack[sp - count * 2 + i * 2]);
         PTValue value = std::move(stack[sp - count * 2 + i * 2 + 1]);
@@ -1065,13 +1557,13 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
         if (obj.instance->klass->parent) {
           auto pit = obj.instance->klass->parent->methods.find(name);
           if (pit != obj.instance->klass->parent->methods.end()) {
-            auto method = pit->second.function;
-            auto mf = std::make_shared<PTFunction>();
-            mf->name = method->name; mf->params = method->params; mf->paramIds = method->paramIds;
-            mf->body = method->body; mf->closure = method->closure;
-            static int thisId = -1;
-            if (thisId < 0) thisId = interner.intern("this");
-            auto me = std::make_shared<Environment>(mf->closure);
+          method = pit->second.function;
+          mf = std::make_shared<PTFunction>();
+          mf->name = method->name; mf->params = method->params; mf->paramIds = method->paramIds;
+          mf->body = method->body; mf->closure = method->closure;
+          static int thisId = -1;
+          if (thisId < 0) thisId = interner.intern("this");
+          me = std::make_shared<Environment>(mf->closure);
             me->set(thisId, obj);
             mf->closure = me;
             stack[sp++] = PTValue(mf);
@@ -1219,6 +1711,7 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
     }
     }
   }
+#endif
   #undef VM_READ_U32
   #undef VM_READ_I32
   return PT_NIL;
