@@ -1,12 +1,12 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #0f1117;
-  --bg2: #161822;
-  --bg3: #1e2030;
-  --bg4: #262840;
-  --text: #e8e8ec;
-  --text-dim: #8a8aa2;
+  --bg: #1a1d2e;
+  --bg2: #222640;
+  --bg3: #2a2e4a;
+  --bg4: #32365a;
+  --text: #eeeef2;
+  --text-dim: #a0a0bc;
   --accent: #6c5ce7;
   --accent2: #a29bfe;
   --gold: #ffd93d;
