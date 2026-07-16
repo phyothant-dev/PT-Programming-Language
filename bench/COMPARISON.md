@@ -12,10 +12,10 @@ Tests function call overhead and recursion depth.
 
 | Language | Time | Relative to PT |
 |----------|------|----------------|
-| **Node.js** (V8) | 0.005s | 40x faster |
-| **Python 3** | 0.052s | 3.9x faster |
-| **Ruby** | 0.049s | 4.1x faster |
-| **PT** | 0.202s | 1x |
+| **Node.js** (V8) | 0.005s | 34x faster |
+| **Python 3** | 0.052s | 3.2x faster |
+| **Ruby** | 0.049s | 3.4x faster |
+| **PT** | 0.169s | 1x |
 
 ### Loop Sum — Sum 1 to 10,000,000
 
@@ -62,19 +62,24 @@ Tests array allocation and iteration.
 
 | Benchmark | PT | Python | Node.js | Ruby |
 |-----------|-----|--------|---------|------|
-| fib(30) | 0.202s | 0.052s | 0.005s | 0.049s |
+| fib(30) | 0.169s | 0.052s | 0.005s | 0.049s |
 | Loop 10M | **0.407s** | 0.461s | 0.009s | 0.204s |
 | String 100K | **0.004s** | 0.127s | 0.003s | 0.244s |
 | Array 100K | 0.016s | 0.003s | 0.002s | 0.002s |
 
 ## Before vs After Optimization
 
-| Benchmark | Before (v1) | v4 | v5 | v7 | v8 | v9 | v10 | v11 | Speedup (v1→v11) |
-|-----------|--------|-------|-------|-------|-------|-------|-------|-------|---------|
-| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | 0.601s | 0.605s | 0.491s | 0.407s | **50x** |
-| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | 0.023s | 0.023s | 0.018s | 0.016s | **35x** |
-| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | 0.241s | 0.137s | 0.005s | 0.004s | **158x** |
-| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | 0.207s | 0.21s | 0.22s | 0.202s | **141x** |
+| Benchmark | Before (v1) | v4 | v5 | v7 | v8 | v9 | v10 | v11 | v12 | Speedup (v1→v12) |
+|-----------|--------|-------|-------|-------|-------|-------|-------|-------|-------|---------|
+| Loop 10M | 20.31s | 1.21s | 1.20s | 1.28s | 0.601s | 0.605s | 0.491s | 0.407s | 0.416s | **49x** |
+| Array 100K | 0.56s | 0.033s | 0.044s | 0.039s | 0.023s | 0.023s | 0.018s | 0.016s | 0.016s | **35x** |
+| String 100K | 0.63s | 0.37s | 0.36s | 0.38s | 0.241s | 0.137s | 0.005s | 0.004s | 0.004s | **158x** |
+| fib(30) | 28.48s | 0.45s | 0.185s | 0.212s | 0.207s | 0.21s | 0.22s | 0.202s | 0.169s | **168x** |
+
+### What was optimized (v12)
+
+1. **Skip env save/restore** — When calling a function whose closure is the same as the current environment (i.e. no variable capture), skip the `shared_ptr<Environment>` save and restore. For recursive functions like `fib()` this eliminates 2 shared_ptr copies (~5ns each) per call. **16% fib speedup.**
+2. **PT is now 168x faster than v1** for fibonacci (up from 141x) and only **3.2x slower than Python** (down from 3.9x).
 
 ### What was optimized (v11)
 
@@ -145,7 +150,7 @@ Node.js uses V8 — a **JIT-compiled** JavaScript engine with hidden classes, in
 - **String operations** — PT is **31.8x faster than Python** and **61x faster than Ruby** for string concatenation. Only Node.js (V8 JIT) is faster.
 - **Loop/integer arithmetic** — PT is **1.1x faster than Python** for raw integer loops. PT's bytecode VM eliminates Python's per-iteration dictionary lookups.
 - **Array operations** — PT is within **1.9x of Python** and **1.3x of Ruby** for array push+iterate.
-- **Fibonacci** — PT is within **3.9x of Python** and **4.1x of Ruby** for function-call-heavy workloads (down from 433x at v1).
+- **Fibonacci** — PT is within **3.2x of Python** and **3.4x of Ruby** for function-call-heavy workloads (down from 433x at v1).
 - **I/O bound tasks** — HTTP server, file I/O, and database operations are dominated by system call time, not interpreter overhead.
 
 ## Design Philosophy

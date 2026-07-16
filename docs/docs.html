@@ -408,7 +408,7 @@ sleep(2000);</code></pre>
         <tr><td>Node.js (V8)</td><td>0.005s</td></tr>
         <tr><td>Python 3</td><td>0.052s</td></tr>
         <tr><td>Ruby</td><td>0.049s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.202s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.169s</td></tr>
       </table>
 
       <h3>Loop Sum — 10M iterations</h3>
@@ -440,11 +440,11 @@ sleep(2000);</code></pre>
 
       <h3>Optimization Results</h3>
       <table>
-        <tr><th>Benchmark</th><th>v1</th><th>v11</th><th>Speedup</th></tr>
+        <tr><th>Benchmark</th><th>v1</th><th>v12</th><th>Speedup</th></th>
         <tr><td>Loop 10M</td><td>20.31s</td><td>0.407s</td><td><strong>50x</strong></td></tr>
         <tr><td>Array 100K</td><td>0.56s</td><td>0.016s</td><td><strong>35x</strong></td></tr>
         <tr><td>String 100K</td><td>0.63s</td><td>0.004s</td><td><strong>158x</strong></td></tr>
-        <tr><td>fib(30)</td><td>28.48s</td><td>0.202s</td><td><strong>141x</strong></td></tr>
+        <tr><td>fib(30)</td><td>28.48s</td><td>0.169s</td><td><strong>168x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">
