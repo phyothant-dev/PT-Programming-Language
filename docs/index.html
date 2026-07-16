@@ -6,8 +6,152 @@
   <title>PT Language - Build Anything</title>
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="stylesheet" href="style.css">
+  <style>
+    #rain-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+    body { position: relative; z-index: 1; }
+    nav, section, footer { position: relative; z-index: 2; }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      background: rgba(108,92,231,0.15);
+      border: 1px solid rgba(108,92,231,0.3);
+      border-radius: 50px;
+      font-size: 0.85rem;
+      color: var(--accent2);
+      margin-bottom: 1.5rem;
+      animation: fadeInUp 0.6s ease 0.1s both;
+    }
+
+    .stat-bar {
+      display: flex;
+      gap: 3rem;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .stat-item { text-align: left; }
+    .stat-item .stat-num {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent2);
+    }
+    .stat-item .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 0.2rem;
+    }
+
+    .marquee-track {
+      display: flex;
+      gap: 3rem;
+      animation: marquee 30s linear infinite;
+      width: max-content;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-section {
+      overflow: hidden;
+      padding: 2rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin: 4rem 0;
+    }
+    .marquee-item {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      white-space: nowrap;
+      opacity: 0.4;
+      transition: opacity 0.3s;
+    }
+    .marquee-item:hover { opacity: 1; color: var(--accent2); }
+    .marquee-item .dot-sep { color: var(--accent); margin: 0 0.5rem; }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: auto auto;
+      gap: 1.5rem;
+    }
+    .bento-card {
+      background: linear-gradient(135deg, var(--bg2), var(--bg3));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: left;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .bento-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--pink), var(--gold));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .bento-card:hover::before { opacity: 1; }
+    .bento-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(108,92,231,0.3);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3), 0 0 30px rgba(108,92,231,0.1);
+    }
+    .bento-card h3 { font-size: 1.2rem; color: var(--text); margin-bottom: 0.6rem; }
+    .bento-card p { color: var(--text-dim); font-size: 0.9rem; line-height: 1.6; }
+    .bento-card .bento-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      background: rgba(108,92,231,0.12);
+      border: 1px solid rgba(108,92,231,0.2);
+    }
+    .bento-span-2 { grid-column: span 2; }
+
+    .syntax-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .syntax-col h3 {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .syntax-col.pt-col h3 { color: var(--accent2); }
+    .syntax-col.other-col h3 { color: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .bento-grid { grid-template-columns: 1fr; }
+      .bento-span-2 { grid-column: span 1; }
+      .syntax-compare { grid-template-columns: 1fr; }
+      .stat-bar { flex-wrap: wrap; gap: 1.5rem; }
+    }
+    @media (max-width: 1024px) {
+      .bento-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
 <body>
+  <canvas id="rain-canvas"></canvas>
+
   <nav>
     <div class="nav-brand"><img src="logo.svg" alt="PT" height="36"></div>
     <div class="nav-links">
@@ -20,11 +164,30 @@
 
   <section class="hero">
     <div class="hero-content">
+      <div class="hero-badge">v12 &mdash; Now with bytecode VM + computed goto</div>
       <h1>Write Code.<br><span class="gradient">Build Web Pages.</span></h1>
-      <p class="hero-sub">PT is a unique programming language with its own syntax, a built-in HTTP server, and everything you need to build real web applications.</p>
+      <p class="hero-sub">A unique programming language with its own syntax, a built-in HTTP server, and everything you need to build real web applications. No npm. No packages. Just code.</p>
       <div class="hero-buttons">
         <a href="playground.html" class="btn btn-primary">Try It Live</a>
         <a href="docs.html" class="btn btn-secondary">Read the Docs</a>
+      </div>
+      <div class="stat-bar">
+        <div class="stat-item">
+          <div class="stat-num">168x</div>
+          <div class="stat-label">Faster than v1</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">40+</div>
+          <div class="stat-label">Built-in functions</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">186</div>
+          <div class="stat-label">Tests passing</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">1</div>
+          <div class="stat-label">Single binary</div>
+        </div>
       </div>
     </div>
     <div class="hero-code">
@@ -47,32 +210,136 @@
     </div>
   </section>
 
+  <div class="marquee-section">
+    <div class="marquee-track">
+      <span class="marquee-item">Bytecode VM<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Computed Goto<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">HTTP Server<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Pattern Matching<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Classes & OOP<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Closures<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">SQLite<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">JSON<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Crypto<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Concurrency<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Bytecode VM<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Computed Goto<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">HTTP Server<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Pattern Matching<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Classes & OOP<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Closures<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">SQLite<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">JSON<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Crypto<span class="dot-sep">&bull;</span></span>
+      <span class="marquee-item">Concurrency<span class="dot-sep">&bull;</span></span>
+    </div>
+  </div>
+
   <section class="features">
     <h2>Why PT?</h2>
-    <div class="feature-grid">
-      <div class="feature-card animate-on-scroll">
+    <p style="color: var(--text-dim); margin-bottom: 3rem; font-size: 1.1rem;">Everything you need, nothing you don't.</p>
+    <div class="bento-grid">
+      <div class="bento-card bento-span-2 animate-on-scroll">
+        <div class="bento-icon">{ }</div>
         <h3>Unique Syntax</h3>
-        <p>No more <code>print()</code>. Use <code>show()</code>. No <code>==</code>, use <code>is</code>. PT has its own identity.</p>
+        <p>No more <code>print()</code> &mdash; use <code>show()</code>. No <code>==</code> &mdash; use <code>is</code>. <code>unless</code> instead of <code>if not</code>. PT has its own identity that reads like English.</p>
       </div>
-      <div class="feature-card animate-on-scroll">
-        <h3>Built-in Server</h3>
-        <p>One line to start a web server. <code>httpListen(3000, handler)</code> and you're live.</p>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#9889;</div>
+        <h3>Bytecode VM</h3>
+        <p>Register-based bytecode with computed goto dispatch. 168x faster than v1.</p>
       </div>
-      <div class="feature-card animate-on-scroll">
-        <h3>File I/O</h3>
-        <p>Read and write files with <code>readFile()</code> and <code>writeFile()</code>. Serve static assets.</p>
-      </div>
-      <div class="feature-card animate-on-scroll">
-        <h3>Pattern Matching</h3>
-        <p>Powerful <code>match</code> expressions with <code>=></code> syntax for clean, readable code.</p>
-      </div>
-      <div class="feature-card animate-on-scroll">
-        <h3>Classes & OOP</h3>
-        <p>Full OOP with classes, inheritance, static methods, <code>this</code> and <code>super</code>.</p>
-      </div>
-      <div class="feature-card animate-on-scroll">
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#9881;</div>
         <h3>Zero Setup</h3>
         <p>Single binary. No packages, no npm, no build step. Just <code>./pt server.pt</code>.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#127760;</div>
+        <h3>Built-in HTTP Server</h3>
+        <p>One line to start a web server. <code>httpListen(3000, handler)</code> and you're live. Route matching, request/response objects included.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#128269;</div>
+        <h3>HTTP Client</h3>
+        <p><code>httpGet</code>, <code>httpPost</code>, <code>httpPut</code>, <code>httpDelete</code> built-in. Call any API without external libraries.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#128193;</div>
+        <h3>File I/O</h3>
+        <p>Read and write files with <code>readFile()</code> and <code>writeFile()</code>. Check existence with <code>fileExists()</code>.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#127912;</div>
+        <h3>Pattern Matching</h3>
+        <p>Powerful <code>match</code> expressions with <code>=></code> syntax for clean, readable branching. Wildcards, guards, destructuring.</p>
+      </div>
+      <div class="bento-card bento-span-2 animate-on-scroll">
+        <div class="bento-icon">&#128218;</div>
+        <h3>Classes & OOP</h3>
+        <p>Full OOP with classes, inheritance, <code>this</code>, <code>super</code>, static methods, constructors, and method overriding. Encapsulation done right.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#128230;</div>
+        <h3>SQLite Built-in</h3>
+        <p><code>pgOpen</code>, <code>pgQuery</code>, <code>pgExec</code> &mdash; database access without any drivers. Zero configuration.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#128273;</div>
+        <h3>Crypto</h3>
+        <p><code>md5()</code>, <code>sha256()</code>, <code>base64Encode()</code>, <code>base64Decode()</code>, <code>uuid()</code> built-in. No external deps.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#128101;</div>
+        <h3>Concurrency</h3>
+        <p><code>spawn()</code> runs functions in background threads. <code>sleep()</code> for timing. Non-blocking by design.</p>
+      </div>
+      <div class="bento-card animate-on-scroll">
+        <div class="bento-icon">&#128279;</div>
+        <h3>Closures</h3>
+        <p>Functions capture their enclosing scope. Lexical scoping with mutable state. First-class functions.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" style="padding-top: 2rem;">
+    <h2>Syntax Comparison</h2>
+    <p style="color: var(--text-dim); margin-bottom: 3rem; font-size: 1.1rem;">See how PT compares to other languages.</p>
+    <div class="syntax-compare">
+      <div class="syntax-col pt-col">
+        <h3>PT</h3>
+        <div class="code-window">
+          <div class="code-bar">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title">hello.pt</span>
+          </div>
+          <pre><code><span class="kw">let</span> name = <span class="str">"World"</span>;
+
+<span class="kw">unless</span> name <span class="kw">is</span> <span class="str">""</span> {
+  <span class="fn">show</span>(<span class="str">"Hello, "</span> + name + <span class="str">"!"</span>);
+}
+
+<span class="kw">let</span> nums = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>];
+<span class="kw">let</span> big = nums.<span class="fn">filter</span>((<span class="arg">x</span>) => x > <span class="num">3</span>);
+<span class="fn">show</span>(big);  <span class="cm">// [4, 5]</span></code></pre>
+        </div>
+      </div>
+      <div class="syntax-col other-col">
+        <h3>Python</h3>
+        <div class="code-window">
+          <div class="code-bar">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="code-title">hello.py</span>
+          </div>
+          <pre><code><span class="arg">name</span> = <span class="str">"World"</span>
+
+<span class="kw">if</span> name != <span class="str">""</span>:
+  <span class="fn">print</span>(<span class="str">f"Hello, {name}!"</span>)
+
+<span class="arg">nums</span> = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+<span class="arg">big</span> = [<span class="arg">x</span> <span class="kw">for</span> <span class="arg">x</span> <span class="kw">in</span> nums <span class="kw">if</span> x > <span class="num">3</span>]
+<span class="fn">print</span>(big)  <span class="cm"># [4, 5]</span></code></pre>
+        </div>
       </div>
     </div>
   </section>
@@ -91,12 +358,12 @@
       </div>
       <div class="demo-card animate-on-scroll">
         <h3>3. Run</h3>
-        <p><code>./pt server.pt</code> — live at localhost:3000</p>
+        <p><code>./pt server.pt</code> &mdash; live at localhost:3000</p>
       </div>
     </div>
   </section>
 
-  <section class="demo-section" style="background: var(--bg2); border-radius: 16px;">
+  <section class="demo-section" style="background: var(--bg2); border-radius: 20px; margin: 0 2rem;">
     <h2>Quick Example</h2>
     <div class="code-window" style="max-width: 700px; margin: 0 auto; text-align: left;">
       <div class="code-bar">
@@ -138,7 +405,7 @@
         </div>
         <h3>Blog</h3>
         <p>Markdown posts, tags, RSS feed</p>
-        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/blog" target="_blank" style="color: var(--accent); font-size: 0.85rem;">View Source &rarr;</a>
+        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/blog" target="_blank" style="color: var(--accent2); font-size: 0.85rem;">View Source &rarr;</a>
       </div>
 
       <div class="feature-card animate-on-scroll">
@@ -149,7 +416,7 @@
           </div>
           <div style="padding: 1rem; text-align: center; background: var(--bg); min-height: 120px;">
             <div style="font-size: 0.85rem; color: var(--text); font-weight: 700;">Phyo Thant</div>
-            <div style="font-size: 0.6rem; color: var(--accent); margin-bottom: 0.6rem;">Building PT Language</div>
+            <div style="font-size: 0.6rem; color: var(--accent2); margin-bottom: 0.6rem;">Building PT Language</div>
             <div style="display: flex; gap: 0.3rem; justify-content: center;">
               <div style="width: 40px; height: 30px; background: var(--bg3); border-radius: 4px;"></div>
               <div style="width: 40px; height: 30px; background: var(--bg3); border-radius: 4px;"></div>
@@ -159,7 +426,7 @@
         </div>
         <h3>Portfolio</h3>
         <p>Project gallery, contact form</p>
-        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/portfolio" target="_blank" style="color: var(--accent); font-size: 0.85rem;">View Source &rarr;</a>
+        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/portfolio" target="_blank" style="color: var(--accent2); font-size: 0.85rem;">View Source &rarr;</a>
       </div>
 
       <div class="feature-card animate-on-scroll">
@@ -183,7 +450,7 @@
         </div>
         <h3>Todo App</h3>
         <p>JSON API, categories, priorities</p>
-        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/todo" target="_blank" style="color: var(--accent); font-size: 0.85rem;">View Source &rarr;</a>
+        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/todo" target="_blank" style="color: var(--accent2); font-size: 0.85rem;">View Source &rarr;</a>
       </div>
 
       <div class="feature-card animate-on-scroll">
@@ -203,7 +470,7 @@
         </div>
         <h3>REST API</h3>
         <p>Routes, middleware, error handling</p>
-        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/api" target="_blank" style="color: var(--accent); font-size: 0.85rem;">View Source &rarr;</a>
+        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/api" target="_blank" style="color: var(--accent2); font-size: 0.85rem;">View Source &rarr;</a>
       </div>
 
       <div class="feature-card animate-on-scroll">
@@ -226,7 +493,7 @@
         </div>
         <h3>Chat Server</h3>
         <p>Rooms, usernames, message history</p>
-        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/chat" target="_blank" style="color: var(--accent); font-size: 0.85rem;">View Source &rarr;</a>
+        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/chat" target="_blank" style="color: var(--accent2); font-size: 0.85rem;">View Source &rarr;</a>
       </div>
 
       <div class="feature-card animate-on-scroll">
@@ -247,14 +514,14 @@
               </div>
             </div>
             <div style="background: var(--bg3); border-radius: 4px; padding: 0.3rem;">
-              <div style="font-size: 0.5rem; color: var(--text-dim);">Alice — $99.99 — shipped</div>
-              <div style="font-size: 0.5rem; color: var(--text-dim);">Bob — $149.50 — pending</div>
+              <div style="font-size: 0.5rem; color: var(--text-dim);">Alice &mdash; $99.99 &mdash; shipped</div>
+              <div style="font-size: 0.5rem; color: var(--text-dim);">Bob &mdash; $149.50 &mdash; pending</div>
             </div>
           </div>
         </div>
         <h3>Dashboard</h3>
         <p>Charts, tables, user management</p>
-        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/dashboard" target="_blank" style="color: var(--accent); font-size: 0.85rem;">View Source &rarr;</a>
+        <a href="https://github.com/phyothant-dev/PT-Programming-Language/tree/main/examples/dashboard" target="_blank" style="color: var(--accent2); font-size: 0.85rem;">View Source &rarr;</a>
       </div>
     </div>
   </section>
@@ -292,6 +559,50 @@
   </footer>
 
   <script>
+    // PT Rain Effect
+    const canvas = document.getElementById('rain-canvas');
+    const ctx = canvas.getContext('2d');
+    const chars = 'PTpt01{}[]()=>fn let show if else return match is isnt loop unless'.split('');
+    const columns = Math.floor(window.innerWidth / 28);
+    const drops = Array(columns).fill(1);
+    const speeds = Array(columns).fill(0).map(() => 0.3 + Math.random() * 0.7);
+    const opacities = Array(columns).fill(0).map(() => 0.03 + Math.random() * 0.08);
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawRain() {
+      ctx.fillStyle = 'rgba(6, 6, 10, 0.08)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const x = i * 28;
+        const y = drops[i] * 22;
+
+        const isHead = Math.random() > 0.7;
+        if (isHead) {
+          ctx.fillStyle = `rgba(162, 155, 254, ${opacities[i] * 3})`;
+          ctx.font = 'bold 16px "Fira Code", monospace';
+        } else {
+          ctx.fillStyle = `rgba(108, 92, 231, ${opacities[i]})`;
+          ctx.font = '14px "Fira Code", monospace';
+        }
+
+        ctx.fillText(char, x, y);
+
+        if (y > canvas.height && Math.random() > 0.985) {
+          drops[i] = 0;
+        }
+        drops[i] += speeds[i];
+      }
+    }
+    setInterval(drawRain, 45);
+
     // Scroll animation observer
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -300,23 +611,15 @@
         }
       });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
     document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
 
-    // Card mouse tracking for glow effect
-    document.querySelectorAll('.feature-card').forEach(card => {
+    // Card mouse tracking glow
+    document.querySelectorAll('.bento-card, .feature-card, .perf-card, .demo-card').forEach(card => {
       card.addEventListener('mousemove', (e) => {
         const rect = card.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        card.style.setProperty('--mouse-x', x + '%');
-        card.style.setProperty('--mouse-y', y + '%');
+        card.style.setProperty('--mouse-x', ((e.clientX - rect.left) / rect.width * 100) + '%');
+        card.style.setProperty('--mouse-y', ((e.clientY - rect.top) / rect.height * 100) + '%');
       });
-    });
-
-    // Stagger animation for feature cards
-    document.querySelectorAll('.feature-card').forEach((card, i) => {
-      card.style.animationDelay = (i * 0.1) + 's';
     });
   </script>
 </body>
