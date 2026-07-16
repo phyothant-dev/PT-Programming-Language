@@ -416,7 +416,7 @@ sleep(2000);</code></pre>
         <tr><th>Language</th><th>Time</th></tr>
         <tr><td>Node.js (V8)</td><td>0.009s</td></tr>
         <tr><td>Python 3</td><td>0.075s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.605s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.491s</td></tr>
       </table>
 
       <h3>String Concatenation — 100K iterations</h3>
@@ -425,7 +425,7 @@ sleep(2000);</code></pre>
         <tr><td>Node.js (V8)</td><td>0.003s</td></tr>
         <tr><td>Python 3</td><td>0.117s</td></tr>
         <tr><td>Ruby</td><td>0.218s</td></tr>
-        <tr><td><strong>PT</strong></td><td>0.137s</td></tr>
+        <tr><td><strong>PT</strong></td><td>0.005s</td></tr>
       </table>
 
       <h3>Array Push + Iterate — 100K items</h3>
@@ -439,11 +439,11 @@ sleep(2000);</code></pre>
 
       <h3>Optimization Results</h3>
       <table>
-        <tr><th>Benchmark</th><th>v1</th><th>v9</th><th>Speedup</th></tr>
-        <tr><td>Loop 10M</td><td>20.31s</td><td>0.605s</td><td><strong>33.6x</strong></td></tr>
-        <tr><td>Array 100K</td><td>0.56s</td><td>0.023s</td><td><strong>24.3x</strong></td></tr>
-        <tr><td>String 100K</td><td>0.63s</td><td>0.137s</td><td><strong>4.6x</strong></td></tr>
-        <tr><td>fib(30)</td><td>28.48s</td><td>0.21s</td><td><strong>136x</strong></td></tr>
+        <tr><th>Benchmark</th><th>v1</th><th>v10</th><th>Speedup</th></tr>
+        <tr><td>Loop 10M</td><td>20.31s</td><td>0.491s</td><td><strong>41.4x</strong></td></tr>
+        <tr><td>Array 100K</td><td>0.56s</td><td>0.018s</td><td><strong>31.1x</strong></td></tr>
+        <tr><td>String 100K</td><td>0.63s</td><td>0.005s</td><td><strong>126x</strong></td></tr>
+        <tr><td>fib(30)</td><td>28.48s</td><td>0.22s</td><td><strong>129x</strong></td></tr>
       </table>
 
       <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">

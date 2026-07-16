@@ -300,6 +300,7 @@ private:
   PTValue evaluate(Expr* expr);
   PTValue callBuiltin(const std::string& name, const std::vector<std::unique_ptr<Expr>>& args);
   PTValue callBuiltinDirect(const std::string& name, const std::vector<PTValue>& args);
+  PTValue callBuiltinFast(const std::string& name, const PTValue* args, size_t argc);
   std::string formatValue(const PTValue& val);
   bool isTruthy(const PTValue& val);
   bool isEqual(const PTValue& a, const PTValue& b);

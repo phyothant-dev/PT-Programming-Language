@@ -660,14 +660,14 @@ Windows users can skip all requirements — just download the pre-built `.exe` f
 
 PT includes a bytecode VM with optimizations for numeric operations. Here's how it compares:
 
-| Benchmark | PT v9 | Python 3 | Ruby | Node.js |
-|-----------|-------|----------|------|---------|
-| fib(30) recursive | **0.21s** | 0.053s | 0.047s | 0.005s |
-| Loop 10M | **0.605s** | 0.075s | ~0s | 0.009s |
-| Array 100K | **0.023s** | 0.002s | 0.003s | 0.002s |
-| String 100K | **0.137s** | 0.117s | 0.218s | 0.003s |
+| Benchmark | PT v10 | Python 3 | Ruby | Node.js |
+|-----------|--------|----------|------|---------|
+| fib(30) recursive | **0.22s** | 0.053s | 0.047s | 0.005s |
+| Loop 10M | **0.491s** | 0.075s | ~0s | 0.009s |
+| Array 100K | **0.018s** | 0.002s | 0.003s | 0.002s |
+| String 100K | **0.005s** | 0.117s | 0.218s | 0.003s |
 
-PT is **136x faster** than v1 for recursive workloads, **33.6x faster** for loops, and **4.6x faster** for string operations. PT is now only 1.2x slower than Python for string concatenation. Full benchmark details in [bench/COMPARISON.md](bench/COMPARISON.md).
+PT is **129x faster** than v1 for recursive workloads, **41x faster** for loops, and **126x faster** for string operations. PT is now **23x faster than Python** for string concatenation. Full benchmark details in [bench/COMPARISON.md](bench/COMPARISON.md).
 
 ---
 

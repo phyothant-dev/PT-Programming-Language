@@ -824,6 +824,7 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
       PTValue b = stack[--sp];
       PTValue& a = stack[sp-1];
       if (a.isNumber() && b.isNumber()) a.numValue += b.numValue;
+      else if (a.isString() && b.isString()) a.value += b.value;
       else a = PTValue(a.ensureStr() + b.ensureStr());
       break;
     }
@@ -926,11 +927,9 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
       PTValue callee = stack[sp - 1 - argc];
 
       if (callee.isFunction() && callee.function->isBuiltin) {
-        std::vector<PTValue> args(argc);
-        for (uint32_t i = 0; i < argc; i++)
-          args[i] = std::move(stack[sp - argc + i]);
+        PTValue* argPtr = &stack[sp - argc];
         sp = sp - 1 - argc;
-        stack[sp++] = callBuiltinDirect(callee.function->name, args);
+        stack[sp++] = callBuiltinFast(callee.function->name, argPtr, argc);
       } else if (callee.isFunction() && callee.function->bytecode) {
         auto& cfn = callee.function;
         frames[frameCount].chunk = curChunk;
@@ -1143,11 +1142,9 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
       uint32_t target = VM_READ_U32();
       PTValue rhs = std::move(stack[--sp]);
       PTValue& lhs = stack[localStart + target];
-      if (lhs.isString() || rhs.isString()) {
-        lhs = PTValue(formatValue(lhs) + formatValue(rhs));
-      } else {
-        lhs = PTValue(lhs.numValue + rhs.numValue);
-      }
+      if (lhs.isNumber() && rhs.isNumber()) lhs.numValue += rhs.numValue;
+      else if (lhs.isString() && rhs.isString()) lhs.value += rhs.value;
+      else lhs = PTValue(formatValue(lhs) + formatValue(rhs));
       break;
     }
     case Op::INC_GLOBAL: {
@@ -1188,11 +1185,9 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
         auto it = e->idxMap.find(id);
         if (it != e->idxMap.end()) {
           PTValue& lhs = e->values[it->second].second;
-          if (lhs.isString() || rhs.isString()) {
-            lhs = PTValue(formatValue(lhs) + formatValue(rhs));
-          } else {
-            lhs = PTValue(lhs.numValue + rhs.numValue);
-          }
+          if (lhs.isNumber() && rhs.isNumber()) lhs.numValue += rhs.numValue;
+          else if (lhs.isString() && rhs.isString()) lhs.value += rhs.value;
+          else lhs = PTValue(formatValue(lhs) + formatValue(rhs));
           stack[sp++] = lhs;
           break;
         }
@@ -1211,17 +1206,15 @@ PTValue Interpreter::execBytecode(PTFunction* fn, const std::vector<PTValue>& ar
     case Op::STRING_APPEND: {
       PTValue rhs = std::move(stack[--sp]);
       PTValue& lhs = stack[sp - 1];
-      if (lhs.isString()) {
-        lhs.value += formatValue(rhs);
-      } else {
-        lhs = PTValue(formatValue(lhs) + formatValue(rhs));
-      }
+      if (lhs.isString() && rhs.isString()) lhs.value += rhs.value;
+      else if (lhs.isString()) lhs.value += formatValue(rhs);
+      else lhs = PTValue(formatValue(lhs) + formatValue(rhs));
       break;
     }
     case Op::SYNC_ENV: {
       uint32_t envId = VM_READ_U32();
       uint32_t localIdx = VM_READ_U32();
-      assignVar(envId, stack[localStart + localIdx]);
+      env->set(envId, stack[localStart + localIdx]);
       break;
     }
     }
@@ -3367,6 +3360,82 @@ PTValue Interpreter::callBuiltinDirect(const std::string& name, const std::vecto
     throw PTRuntimeError("httpListen() cannot be called from bytecode");
   }
   return PTValue(std::make_shared<PTFunction>());
+}
+
+PTValue Interpreter::callBuiltinFast(const std::string& name, const PTValue* args, size_t argc) {
+  // Hot builtins inlined for zero-overhead dispatch
+  if (name[0] == 'l' && name == "len") {
+    if (argc != 1) throw PTRuntimeError("len() expects 1 argument");
+    if (args[0].isArray()) return PTValue(static_cast<double>(args[0].array->size()));
+    return PTValue(static_cast<double>(args[0].value.size()));
+  }
+  if (name[0] == 'p' && name == "push") {
+    if (argc != 2) throw PTRuntimeError("push() expects 2 arguments");
+    if (!args[0].isArray()) throw PTRuntimeError("push() expects an array");
+    args[0].array->push_back(args[1]);
+    return PT_TRUE;
+  }
+  if (name[0] == 't' && name == "toString") {
+    if (argc != 1) throw PTRuntimeError("toString() expects 1 argument");
+    return PTValue(formatValue(args[0]));
+  }
+  if (name[0] == 'c' && name == "clock") {
+    if (argc != 0) throw PTRuntimeError("clock() expects no arguments");
+    return PTValue(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
+  }
+  if (name[0] == 't' && name == "type") {
+    if (argc != 1) throw PTRuntimeError("type() expects 1 argument");
+    switch (args[0].type) {
+    case PTValue::TFunction: return PTValue("function");
+    case PTValue::TArray: return PTValue("array");
+    case PTValue::TMap: return PTValue("map");
+    case PTValue::TClass: return PTValue("class");
+    case PTValue::TInstance: return PTValue("instance");
+    case PTValue::TNil: return PTValue("nil");
+    case PTValue::TNumber: return PTValue("number");
+    case PTValue::TDatabase: return PTValue("database");
+    case PTValue::TBool: return PTValue("bool");
+    case PTValue::TString: return PTValue("string");
+    }
+    return PTValue("string");
+  }
+  if (name[0] == 't' && name == "toNum") {
+    if (argc != 1) throw PTRuntimeError("toNum() expects 1 argument");
+    try { return PTValue(std::stod(args[0].value)); }
+    catch (...) { return PT_NIL; }
+  }
+  if (name[0] == 'r' && name == "range") {
+    if (argc < 1 || argc > 2) throw PTRuntimeError("range() expects 1 or 2 arguments");
+    auto arr = std::make_shared<std::vector<PTValue>>();
+    if (argc == 1) {
+      int end = (int)toDouble(args[0]);
+      arr->reserve(end);
+      for (int i = 0; i < end; i++) arr->push_back(PTValue(static_cast<double>(i)));
+    } else {
+      int start = (int)toDouble(args[0]);
+      int end = (int)toDouble(args[1]);
+      if (start <= end) { arr->reserve(end - start); for (int i = start; i < end; i++) arr->push_back(PTValue(static_cast<double>(i))); }
+      else { arr->reserve(start - end); for (int i = start; i > end; i--) arr->push_back(PTValue(static_cast<double>(i))); }
+    }
+    return PTValue(arr);
+  }
+  if (name[0] == 'p' && name == "pop") {
+    if (argc != 1) throw PTRuntimeError("pop() expects 1 argument");
+    if (!args[0].isArray()) throw PTRuntimeError("pop() expects an array");
+    if (args[0].array->empty()) return PT_NIL;
+    auto val = args[0].array->back();
+    args[0].array->pop_back();
+    return val;
+  }
+  if (name[0] == 's' && name == "sleep") {
+    if (argc != 1) throw PTRuntimeError("sleep() expects 1 argument");
+    double millis = args[0].isNumber() ? args[0].numValue : std::stod(args[0].value);
+    std::this_thread::sleep_for(std::chrono::milliseconds((int)millis));
+    return PT_NIL;
+  }
+  // Fall through to full dispatch for less common builtins
+  std::vector<PTValue> argVec(args, args + argc);
+  return callBuiltinDirect(name, argVec);
 }
 
 void Interpreter::registerBuiltins() {
